@@ -1,0 +1,10 @@
+﻿{
+  "Author": "Ottermandias",
+  "Name": "RezzPls",
+  "Description": "Easy overview about who is currently resurrecting who.",
+  "InternalName": "RezzMe",
+  "AssemblyVersion": "1.0.0.0",
+  "RepoUrl": "https://github.com/Ottermandias/RezzPls",
+  "ApplicableVersion": "any",
+  "DalamudApiLevel": 2
+}
