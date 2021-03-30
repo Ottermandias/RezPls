@@ -30,14 +30,15 @@ namespace RezzPls
             _pluginInterface.UiBuilder.OnBuildUi += Draw;
             _hudManager                          =  new HudManager(_pluginInterface.TargetModuleScanner);
 
-            _phoenixDown = _pluginInterface.UiBuilder.LoadImage(@"H:\Garfield.png");
+            //_phoenixDown = _pluginInterface.UiBuilder.LoadImage(@"H:\Garfield.png");
         }
 
         public void Dispose()
         {
             _hudManager.Dispose();
+            _hudManager.Dispose();
             _pluginInterface.UiBuilder.OnBuildUi -= Draw;
-            _phoenixDown.Dispose();
+            //_phoenixDown.Dispose();
         }
 
         private static readonly Vector2 IconSize = new(150, 200);
@@ -45,7 +46,7 @@ namespace RezzPls
         public void DrawIcon(ImDrawListPtr drawPtr, SharpDX.Vector2 pos, string text = "UNDEADED")
         {
             ImGui.SetCursorPos(new Vector2(pos.X, pos.Y - IconSize.Y / 2) - IconSize / 2);
-            ImGui.Image(_phoenixDown.ImGuiHandle, IconSize);
+           //ImGui.Image(_phoenixDown.ImGuiHandle, IconSize);
             var textSize = ImGui.CalcTextSize(text);
             ImGui.SetCursorPos(new Vector2(pos.X, pos.Y) - textSize / 2);
             ImGui.Button(text);
