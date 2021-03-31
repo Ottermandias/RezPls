@@ -34,6 +34,10 @@
 	<PropertyGroup>
 		<RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="RezzIcon" />
+	</ItemGroup>
 	
 	<ItemGroup>
 		<Reference Include="Dalamud">
@@ -53,6 +57,9 @@
 		</Reference>
     <Reference Include="FFXIVClientStructs">
 			<HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+		</Reference>
+    <Reference Include="Lumina">
+			<HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\Lumina.dll</HintPath>
 		</Reference>
 		<Reference Include="System" />
 		<Reference Include="System.Core" />		

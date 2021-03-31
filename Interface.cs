@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using Dalamud.Data.LuminaExtensions;
 using Dalamud.Game.ClientState.Actors.Types;
 using Dalamud.Plugin;
 using FFXIVClientStructs.Component.GUI;
@@ -20,7 +23,28 @@ namespace RezzPls
 
         public bool Visible = true;
 
-        private ImGuiScene.TextureWrap _phoenixDown;
+        private readonly        ImGuiScene.TextureWrap? _rezzIcon;
+        private static readonly Vector4                 BlackColor = new(0, 0, 0, 1);
+        private static readonly Vector4                 WhiteColor = new(1, 1, 1, 1);
+
+        private static ImGuiScene.TextureWrap? BuildRezzIcon(DalamudPluginInterface pi)
+        {
+            const int rezzIconId = 10406;
+
+            var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("RezzPls.RezzIcon");
+            if (resource != null)
+            {
+                using MemoryStream ms = new MemoryStream();
+                resource.CopyTo(ms);
+                var bytes = ms.ToArray();
+                var wrap = pi.UiBuilder.LoadImageRaw(bytes, 48, 64, 4);
+                if (wrap != null)
+                    return wrap;
+            }
+
+            var texFile = pi.Data.GetIcon(rezzIconId);
+            return pi.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
+        }
 
         public Interface(DalamudPluginInterface pluginInterface, ActorWatcher actorWatcher)
         {
@@ -29,24 +53,23 @@ namespace RezzPls
             _rezzed                              =  actorWatcher.RezzedList;
             _pluginInterface.UiBuilder.OnBuildUi += Draw;
             _hudManager                          =  new HudManager(_pluginInterface.TargetModuleScanner);
-
-            //_phoenixDown = _pluginInterface.UiBuilder.LoadImage(@"H:\Garfield.png");
+            _rezzIcon                         =  BuildRezzIcon(_pluginInterface);
         }
 
         public void Dispose()
         {
-            _hudManager.Dispose();
-            _hudManager.Dispose();
+            _hudManager?.Dispose();
             _pluginInterface.UiBuilder.OnBuildUi -= Draw;
-            //_phoenixDown.Dispose();
+            _rezzIcon?.Dispose();
         }
-
-        private static readonly Vector2 IconSize = new(150, 200);
 
         public void DrawIcon(ImDrawListPtr drawPtr, SharpDX.Vector2 pos, string text = "UNDEADED")
         {
-            ImGui.SetCursorPos(new Vector2(pos.X, pos.Y - IconSize.Y / 2) - IconSize / 2);
-           //ImGui.Image(_phoenixDown.ImGuiHandle, IconSize);
+            if (_rezzIcon == null)
+                return;
+
+            ImGui.SetCursorPos(new Vector2(pos.X - _rezzIcon.Width / 2f,       pos.Y - _rezzIcon.Height));
+            ImGui.Image(_rezzIcon.ImGuiHandle, new Vector2(_rezzIcon.Width, _rezzIcon.Height));
             var textSize = ImGui.CalcTextSize(text);
             ImGui.SetCursorPos(new Vector2(pos.X, pos.Y) - textSize / 2);
             ImGui.Button(text);
@@ -83,35 +106,66 @@ namespace RezzPls
             return pos;
         }
 
+        private static void TextShadowed(string text, Vector4 foregroundColor, Vector4 shadowColor, byte shadowWidth = 1)
+        {
+            var x = ImGui.GetCursorPosX();
+            var y = ImGui.GetCursorPosY();
+
+            for (var i = -shadowWidth; i < shadowWidth; i++)
+            {
+                for (var j = -shadowWidth; j < shadowWidth; j++)
+                {
+                    if (i == 0 && j == 0)
+                        continue;
+
+                    ImGui.SetCursorPosX(x + i);
+                    ImGui.SetCursorPosY(y + j);
+                    ImGui.TextColored(shadowColor, text);
+                }
+            }
+
+            ImGui.SetCursorPosX(x);
+            ImGui.SetCursorPosY(y);
+            ImGui.TextColored(foregroundColor, text);
+        }
+
+        private static readonly Vector2 GreenBoxPositionOffset = new(5, 5);
+        private static readonly Vector2 GreenBoxSizeOffset     = new(8, 10);
+        private const           float   GreenBoxEdgeRounding   = 10;
+        private const           uint    GreenBoxColor          = 0x4000FF00;
+
         private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AtkUnitBase* partyList, int idx, string caster = "")
         {
             idx = 17 - idx;
             var nodePtr  = (AtkComponentNode*) partyList->ULDData.NodeList[idx];
             var colNode  = nodePtr->Component->ULDData.NodeList[2];
-            var rectMin  = GetNodePosition(colNode) + new Vector2(5 * partyList->Scale, 5 * partyList->Scale);
-            var rectSize = new Vector2(colNode->Width * partyList->Scale, colNode->Height * partyList->Scale) - new Vector2(8 * partyList->Scale, 10 * partyList->Scale);
-            drawPtr.AddRectFilled(rectMin, rectMin + rectSize, 0x4000FF00, 10 * partyList->Scale);
+            var rectMin  = GetNodePosition(colNode) + GreenBoxPositionOffset * partyList->Scale;
+            var rectSize = (new Vector2(colNode->Width, colNode->Height) - GreenBoxSizeOffset) * partyList->Scale;
+            drawPtr.AddRectFilled(rectMin, rectMin + rectSize, GreenBoxColor, GreenBoxEdgeRounding * partyList->Scale);
             if (caster.Length <= 0)
                 return;
 
             ImGui.SetCursorPosY(rectMin.Y + (rectSize.Y - ImGui.GetTextLineHeight()) / 2);
             ImGui.SetCursorPosX(rectMin.X + rectSize.X - 5 - ImGui.CalcTextSize(caster).X);
-            ImGui.Text(caster);
+            TextShadowed(caster, WhiteColor, BlackColor, 2);
         }
 
         private static unsafe void DrawAllianceRect(ImDrawListPtr drawPtr, AtkUnitBase* allianceList, int idx, string caster = "")
         {
             idx = 9 - idx;
             var nodePtr  = allianceList->ULDData.NodeList[idx];
-            var rectMin  = GetNodePosition(nodePtr) + new Vector2(5 * nodePtr->ScaleX, 5 * nodePtr->ScaleY);
-            var rectSize = new Vector2(nodePtr->Width, nodePtr->Height) - new Vector2(8 * nodePtr->ScaleX, 10 * nodePtr->ScaleY);
-            drawPtr.AddRectFilled(rectMin, rectMin + rectSize, 0x4000FF00, 10);
+            var comp     = ((AtkComponentNode*) nodePtr)->Component;
+            var gridNode = comp->ULDData.NodeList[2]->ChildNode;
+            var rectMin  = GetNodePosition(gridNode) + new Vector2(5 * allianceList->Scale, 5 * allianceList->Scale);
+            var rectSize = new Vector2(gridNode->Width * allianceList->Scale, gridNode->Height * allianceList->Scale)
+              - new Vector2(8 * allianceList->Scale,                          10 * allianceList->Scale);
+            drawPtr.AddRectFilled(rectMin, rectMin + rectSize, 0x4000FF00, 10 * allianceList->Scale);
             if (caster.Length <= 0)
                 return;
 
             ImGui.SetCursorPosY(rectMin.Y + (rectSize.Y - ImGui.GetTextLineHeight()) / 2);
             ImGui.SetCursorPosX(rectMin.X + rectSize.X - 5 - ImGui.CalcTextSize(caster).X);
-            ImGui.Text(caster);
+            TextShadowed(caster, WhiteColor, BlackColor);
         }
 
 
@@ -136,22 +190,22 @@ namespace RezzPls
                         switch (group.Value.groupIdx)
                         {
                             case 0:
-                                if(drawParty)
+                                if (drawParty)
                                     DrawPartyRect(drawPtr, party, group.Value.idx, caster == null ? "" : caster.Name);
                                 break;
                             case 1:
-                                if(drawAlliance1)
+                                if (drawAlliance1)
                                     DrawAllianceRect(drawPtr, alliance1, group.Value.idx, caster == null ? "" : caster.Name);
                                 break;
                             case 2:
-                                if(drawAlliance2)
+                                if (drawAlliance2)
                                     DrawAllianceRect(drawPtr, alliance2, group.Value.idx, caster == null ? "" : caster.Name);
                                 break;
                         }
                 }
 
                 if (_pluginInterface.Framework.Gui.WorldToScreen(corpse.Position, out var screenPos))
-                    DrawIcon(drawPtr, screenPos, caster == null ? "Resurrected" : $"Being resurrected by {caster.Name}");
+                    DrawIcon(drawPtr, screenPos, caster == null ? "Already Raised" : $"Raise: {caster.Name}");
             }
 
             foreach (var corpse in _rezzed.Values.Where(corpse => corpse != null))
@@ -164,6 +218,9 @@ namespace RezzPls
         public void Draw()
         {
             if (!Visible)
+                return;
+
+            if (_rezzed.Count + _rezzes.Count == 0)
                 return;
 
             try
