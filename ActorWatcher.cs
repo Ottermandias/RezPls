@@ -1,45 +1,95 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Actors;
-using Dalamud.Game.ClientState.Actors.Types;
-using Dalamud.Hooking;
+using Dalamud.Game.Internal;
 using Dalamud.Plugin;
-using RezzPls.SeFunctions;
 
 namespace RezzPls
 {
     public class ActorWatcher : IDisposable
     {
+        private          bool                   _enabled = false;
         private readonly DalamudPluginInterface _pluginInterface;
-        private readonly int                    _actorsPerUpdate;
-        private          int                    _currentActor;
+        private readonly IntPtr                 _actorTablePtr;
+        private const    int                    ActorTableLength       = 424;
+        private const    int                    ActorTablePlayerLength = 256;
+
+        public readonly Dictionary<uint, uint>      RezzList       = new(128);
+        public readonly Dictionary<uint, string>    ActorNames     = new();
+        public readonly Dictionary<uint, Position3> ActorPositions = new();
+        public          (uint, uint)                PlayerRezz     = (0, 0);
 
         public ActorWatcher(DalamudPluginInterface pluginInterface)
         {
             _pluginInterface                         =  pluginInterface;
             _pluginInterface.Framework.OnUpdateEvent += OnFrameworkUpdate;
-            _actorsPerUpdate                         =  32;
+
+            _actorTablePtr = BaseAddressResolver.DebugScannedValues["ClientStateAddressResolver"]
+                .Find(kvp => kvp.Item1 == "ActorTable").Item2;
+        }
+
+        public void Enable()
+        {
+            if (_enabled)
+                return;
+
+            _pluginInterface.Framework.OnUpdateEvent += OnFrameworkUpdate;
+            _enabled                                 =  true;
+        }
+
+        public void Disable()
+        {
+            if (!_enabled)
+                return;
+
+            _pluginInterface.Framework.OnUpdateEvent -= OnFrameworkUpdate;
+            _enabled                                 =  false;
+            RezzList.Clear();
+            PlayerRezz = (0, 0);
         }
 
         public void Dispose()
-        {
-            _pluginInterface.Framework.OnUpdateEvent -= OnFrameworkUpdate;
-        }
+            => Disable();
 
-        private static unsafe ushort GetCurrentCast(IntPtr actorPtr)
+        private static unsafe ushort GetCurrentCast(byte* actorPtr)
         {
             const int currentCastIdOffset = 0x1B64;
             return *(ushort*) (actorPtr + currentCastIdOffset);
         }
 
-        private static unsafe int GetCastTarget(IntPtr actorPtr)
+        private static unsafe uint GetCastTarget(byte* actorPtr)
         {
             const int currentCastTargetOffset = 0x1B70;
-            return *(int*) (actorPtr + currentCastTargetOffset);
+            return *(uint*) (actorPtr + currentCastTargetOffset);
         }
 
-        private unsafe bool IsCastingResurrection(IntPtr actorPtr)
+        private static unsafe uint GetActorId(byte* actorPtr)
+        {
+            const int actorIdOffset = 0x74;
+            return *(uint*) (actorPtr + actorIdOffset);
+        }
+
+        private static unsafe string GetActorName(byte* actorPtr)
+        {
+            const int actorNameOffset = 0x30;
+            const int actorNameLength = 30;
+
+            return Marshal.PtrToStringAnsi(new IntPtr(actorPtr) + actorNameOffset, actorNameLength).TrimEnd('\0');
+        }
+
+        private static unsafe Position3 GetActorPosition(byte* actorPtr)
+        {
+            const int actorPositionOffset = 0xA0;
+            return new Position3
+            {
+                X = *(float*) (actorPtr + actorPositionOffset),
+                Y = *(float*) (actorPtr + actorPositionOffset + 8),
+                Z = *(float*) (actorPtr + actorPositionOffset + 4),
+            };
+        }
+
+        private static unsafe bool IsCastingResurrection(byte* actorPtr)
         {
             switch (GetCurrentCast(actorPtr))
             {
@@ -60,44 +110,84 @@ namespace RezzPls
             return false;
         }
 
-        private static bool IsRaised(Actor actor)
-            => actor.StatusEffects.Any(s => s.EffectId == 148 || s.EffectId == 1140);
+        private static unsafe bool IsPlayer(byte* actorPtr)
+        {
+            const int  objectKindOffset = 0x8C;
+            const byte playerObjectKind = (byte) ObjectKind.Player;
 
-        private Actor? GetActorById(int actorId)
-            => _pluginInterface.ClientState.Actors.FirstOrDefault(a => a.ActorId == actorId);
+            return *(actorPtr + objectKindOffset) == playerObjectKind;
+        }
 
-        public readonly Dictionary<int, (Actor? caster, Actor? target)> RezzList   = new(128);
-        public readonly Dictionary<int, Actor>                          RezzedList = new(128);
+        private static unsafe bool IsDead(byte* actorPtr)
+        {
+            const int currentHpOffset = 0x1C4;
+
+            return *(int*) (actorPtr + currentHpOffset) == 0;
+        }
+
+        private static unsafe bool IsRaised(byte* actorPtr)
+        {
+            const int statusEffectsOffset = 0x19D8;
+            const int statusEffectSize    = 12;
+            const int maxStatusEffects    = 20;
+
+            var start = actorPtr + statusEffectsOffset;
+            var end   = start + statusEffectSize * maxStatusEffects;
+            for (; start < end; start += 12)
+            {
+                var id = *(ushort*) start;
+                switch (id)
+                {
+                    case 148:
+                    case 1140:
+                        return true;
+                    case 0: return false;
+                }
+            }
+
+            return false;
+        }
+
+        private unsafe void IterateActors()
+        {
+            var current = (byte**) _actorTablePtr;
+            var end     = current + ActorTablePlayerLength;
+            for (; current < end; current += 2)
+            {
+                var actor = *current;
+                if (actor == null || !IsPlayer(actor))
+                    continue;
+
+                if (IsDead(actor))
+                {
+                    var actorId = GetActorId(actor);
+                    ActorPositions[actorId] = GetActorPosition(actor);
+                    if (IsRaised(actor))
+                        RezzList[actorId] = 0;
+                    if (!ActorNames.ContainsKey(actorId))
+                        ActorNames.Add(actorId, GetActorName(actor));
+                }
+                else if (IsCastingResurrection(actor))
+                {
+                    var actorId = GetActorId(actor);
+                    if (!ActorNames.ContainsKey(actorId))
+                        ActorNames.Add(actorId, GetActorName(actor));
+
+                    var corpseId = GetCastTarget(actor);
+                    if (current == (byte**) _actorTablePtr)
+                        PlayerRezz = (corpseId, actorId);
+
+                    if (!RezzList.TryGetValue(corpseId, out var caster) || caster == PlayerRezz.Item2)
+                        RezzList[corpseId] = actorId;
+                }
+            }
+        }
 
         public void OnFrameworkUpdate(object _)
         {
-            var length    = Math.Max(_pluginInterface.ClientState.Actors.Length - 2, 256);
-            var numActors = _actorsPerUpdate == 0 ? length / 2 + 1 : Math.Max(length / 2 + 1, _actorsPerUpdate);
-            for (var i = 0; i < numActors; ++i)
-            {
-                _currentActor = _currentActor >= length ? 0 : _currentActor + 2;
-                var actor = _pluginInterface.ClientState.Actors[_currentActor];
-                if ((actor?.ObjectKind ?? 0) != ObjectKind.Player)
-                    continue;
-
-                if (IsRaised(actor!))
-                    RezzedList[actor!.ActorId] = actor;
-                else
-                    RezzedList.Remove(actor!.ActorId);
-
-                if (!IsCastingResurrection(actor!.Address))
-                {
-                    RezzList.Remove(actor.ActorId);
-                    continue;
-                }
-
-                if (RezzList.ContainsKey(actor!.ActorId))
-                    continue;
-
-                var targetId = GetCastTarget(actor.Address);
-                var target   = GetActorById(targetId);
-                RezzList.Add(actor.ActorId, (actor, target));
-            }
+            RezzList.Clear();
+            PlayerRezz = (0, 0);
+            IterateActors();
         }
     }
 }
