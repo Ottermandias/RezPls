@@ -125,7 +125,7 @@ namespace RezzPls
 
         private void DrawResetColorsButton()
         {
-            if (!ImGui.Button("Reset Colors to Default", new Vector2(-1, ImGui.GetTextLineHeightWithSpacing() * 1.2f)))
+            if (!ImGui.Button("Reset Colors to Default", new Vector2(-1, 0)))
                 return;
 
             _config.CurrentlyRaisingColor  = RezzPlsConfig.DefaultCurrentlyRaisingColor;
@@ -140,7 +140,12 @@ namespace RezzPls
             if (!Visible)
                 return;
 
-            var height      = 18.2f * ImGui.GetTextLineHeightWithSpacing() + 32 * ImGui.GetStyle().ItemSpacing.Y;
+            var buttonHeight      = ImGui.GetFontSize() + ImGui.GetStyle().FramePadding.Y * 2;
+            var horizontalSpacing = new Vector2(0, ImGui.GetTextLineHeightWithSpacing());
+
+            var height = 13 * buttonHeight
+              + 6 * horizontalSpacing.Y
+              + 20 * ImGui.GetStyle().ItemSpacing.Y;
             var width       = 450 * ImGui.GetIO().FontGlobalScale;
             var constraints = new Vector2(width, height);
             ImGui.SetNextWindowSizeConstraints(constraints, constraints);
@@ -148,7 +153,6 @@ namespace RezzPls
             if (!ImGui.Begin("RezzPls Configuration", ref Visible, ImGuiWindowFlags.NoResize))
                 return;
 
-            var horizontalSpacing = new Vector2(0, ImGui.GetTextLineHeightWithSpacing());
 
             DrawEnabledCheckbox();
             ImGui.Dummy(horizontalSpacing);
