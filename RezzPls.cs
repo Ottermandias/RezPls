@@ -1,4 +1,5 @@
-﻿using Dalamud.Plugin;
+﻿using Dalamud.Game.Command;
+using Dalamud.Plugin;
 
 namespace RezzPls
 {
@@ -28,6 +29,17 @@ namespace RezzPls
             _interface    = new Interface(_pluginInterface, this, _config);
             if (_config.Enabled)
                 Enable();
+
+            _pluginInterface.CommandManager.AddHandler("/rezzpls", new CommandInfo(OnRezzPls)
+            {
+                HelpMessage = "Open the configuration window for RezzPls.",
+                ShowInHelp  = true,
+            });
+        }
+
+        public void OnRezzPls(string _, string arguments)
+        {
+            _interface!.Visible = !_interface.Visible;
         }
 
         public void Save()
@@ -47,6 +59,7 @@ namespace RezzPls
 
         public void Dispose()
         {
+            _pluginInterface!.CommandManager.RemoveHandler("/rezzpls");
             _interface?.Dispose();
             _overlay?.Dispose();
             _actorWatcher?.Dispose();
