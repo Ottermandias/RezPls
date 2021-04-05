@@ -36,7 +36,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <EmbeddedResource Include="RezIcon" />
+	  <EmbeddedResource Include="RaiseIcon" />
 	</ItemGroup>
 	
 	<ItemGroup>

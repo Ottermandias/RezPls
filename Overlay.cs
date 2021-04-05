@@ -115,6 +115,8 @@ namespace RezPls
 
         public ImDrawListPtr? BeginRezRects()
         {
+            ImGui.SetNextWindowViewport(ImGui.GetMainViewport().ID);
+
             const ImGuiWindowFlags flags = ImGuiWindowFlags.NoDecoration
               | ImGuiWindowFlags.NoSavedSettings
               | ImGuiWindowFlags.NoMove
