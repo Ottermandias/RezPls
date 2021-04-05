@@ -2,9 +2,9 @@
 using Dalamud.Game;
 using Dalamud.Hooking;
 using Dalamud.Plugin;
-using RezzPls.SeFunctions;
+using RezPls.SeFunctions;
 
-namespace RezzPls
+namespace RezPls
 {
     public unsafe class HudManager : IDisposable
     {

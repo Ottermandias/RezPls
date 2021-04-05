@@ -1,2 +1,2 @@
-# RezzPls
-Signify players currently being rezzed or already rezzed in group/alliance interface and on the ground.
+# RezPls
+Signify players currently being resurrected or already resurrected in group/alliance interface and on the ground.

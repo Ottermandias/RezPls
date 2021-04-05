@@ -1,8 +1,8 @@
 ﻿using Dalamud.Configuration;
 
-namespace RezzPls
+namespace RezPls
 {
-    public class RezzPlsConfig : IPluginConfiguration
+    public class RezPlsConfig : IPluginConfiguration
     {
         public const uint DefaultRaisedColor            = 0x60D2FF00;
         public const uint DefaultCurrentlyRaisingColor  = 0x6000FF00;

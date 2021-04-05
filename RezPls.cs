@@ -1,26 +1,26 @@
 ﻿using Dalamud.Game.Command;
 using Dalamud.Plugin;
 
-namespace RezzPls
+namespace RezPls
 {
-    public class RezzPls : IDalamudPlugin
+    public class RezPls : IDalamudPlugin
     {
         public string Name
-            => "RezzPls";
+            => "RezPls";
 
         private DalamudPluginInterface? _pluginInterface;
         private ActorWatcher?           _actorWatcher;
         private Overlay?                _overlay;
         private Interface?              _interface;
-        private RezzPlsConfig?          _config;
+        private RezPlsConfig?          _config;
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {
             _pluginInterface = pluginInterface;
-            _config          = _pluginInterface.GetPluginConfig() as RezzPlsConfig;
+            _config          = _pluginInterface.GetPluginConfig() as RezPlsConfig;
             if (_config == null)
             {
-                _config = new RezzPlsConfig();
+                _config = new RezPlsConfig();
                 Save();
             }
 
@@ -30,14 +30,14 @@ namespace RezzPls
             if (_config.Enabled)
                 Enable();
 
-            _pluginInterface.CommandManager.AddHandler("/rezzpls", new CommandInfo(OnRezzPls)
+            _pluginInterface.CommandManager.AddHandler("/rezpls", new CommandInfo(OnRezPls)
             {
-                HelpMessage = "Open the configuration window for RezzPls.",
+                HelpMessage = "Open the configuration window for RezPls.",
                 ShowInHelp  = true,
             });
         }
 
-        public void OnRezzPls(string _, string arguments)
+        public void OnRezPls(string _, string arguments)
         {
             _interface!.Visible = !_interface.Visible;
         }
@@ -59,7 +59,7 @@ namespace RezzPls
 
         public void Dispose()
         {
-            _pluginInterface!.CommandManager.RemoveHandler("/rezzpls");
+            _pluginInterface!.CommandManager.RemoveHandler("/rezpls");
             _interface?.Dispose();
             _overlay?.Dispose();
             _actorWatcher?.Dispose();

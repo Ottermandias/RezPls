@@ -4,7 +4,7 @@ using Dalamud.Game;
 using Dalamud.Hooking;
 using Dalamud.Plugin;
 
-namespace RezzPls.SeFunctions
+namespace RezPls.SeFunctions
 {
     public class SeFunctionBase<T> where T : Delegate
     {

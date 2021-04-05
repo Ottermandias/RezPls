@@ -1,7 +1,7 @@
 using System;
 using Dalamud.Game;
 
-namespace RezzPls.SeFunctions
+namespace RezPls.SeFunctions
 {
     public delegate void UpdatePartyDelegate(IntPtr hudAgent);
 

@@ -2,12 +2,12 @@
   <PropertyGroup>
 		<TargetFramework>net472</TargetFramework>
 		<LangVersion>preview</LangVersion>
-		<RootNamespace>RezzPls</RootNamespace>
-		<AssemblyName>RezzPls</AssemblyName>
+		<RootNamespace>RezPls</RootNamespace>
+		<AssemblyName>RezPls</AssemblyName>
 		<FileVersion>1.0.0.0</FileVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
 		<Company>SoftOtter</Company>
-    <Product>RezzMe</Product>
+    <Product>RezPls</Product>
     <Copyright>Copyright © 2020</Copyright>
 		<Deterministic>true</Deterministic>
 		<OutputType>Library</OutputType>
@@ -36,7 +36,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <EmbeddedResource Include="RezzIcon" />
+	  <EmbeddedResource Include="RezIcon" />
 	</ItemGroup>
 	
 	<ItemGroup>
@@ -81,7 +81,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="RezzPls.json">
+	  <None Update="RezPls.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>

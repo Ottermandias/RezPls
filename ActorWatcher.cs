@@ -5,7 +5,7 @@ using Dalamud.Game.ClientState.Actors;
 using Dalamud.Game.Internal;
 using Dalamud.Plugin;
 
-namespace RezzPls
+namespace RezPls
 {
     public class ActorWatcher : IDisposable
     {
@@ -15,10 +15,10 @@ namespace RezzPls
         private const    int                    ActorTableLength       = 424;
         private const    int                    ActorTablePlayerLength = 256;
 
-        public readonly Dictionary<uint, uint>      RezzList       = new(128);
+        public readonly Dictionary<uint, uint>      RezList        = new(128);
         public readonly Dictionary<uint, string>    ActorNames     = new();
         public readonly Dictionary<uint, Position3> ActorPositions = new();
-        public          (uint, uint)                PlayerRezz     = (0, 0);
+        public          (uint, uint)                PlayerRez      = (0, 0);
 
         public ActorWatcher(DalamudPluginInterface pluginInterface)
         {
@@ -45,8 +45,8 @@ namespace RezzPls
 
             _pluginInterface.Framework.OnUpdateEvent -= OnFrameworkUpdate;
             _enabled                                 =  false;
-            RezzList.Clear();
-            PlayerRezz = (0, 0);
+            RezList.Clear();
+            PlayerRez = (0, 0);
         }
 
         public void Dispose()
@@ -163,7 +163,7 @@ namespace RezzPls
                     var actorId = GetActorId(actor);
                     ActorPositions[actorId] = GetActorPosition(actor);
                     if (IsRaised(actor))
-                        RezzList[actorId] = 0;
+                        RezList[actorId] = 0;
                     if (!ActorNames.ContainsKey(actorId))
                         ActorNames.Add(actorId, GetActorName(actor));
                 }
@@ -175,18 +175,18 @@ namespace RezzPls
 
                     var corpseId = GetCastTarget(actor);
                     if (current == (byte**) _actorTablePtr)
-                        PlayerRezz = (corpseId, actorId);
+                        PlayerRez = (corpseId, actorId);
 
-                    if (!RezzList.TryGetValue(corpseId, out var caster) || caster == PlayerRezz.Item2)
-                        RezzList[corpseId] = actorId;
+                    if (!RezList.TryGetValue(corpseId, out var caster) || caster == PlayerRez.Item2)
+                        RezList[corpseId] = actorId;
                 }
             }
         }
 
         public void OnFrameworkUpdate(object _)
         {
-            RezzList.Clear();
-            PlayerRezz = (0, 0);
+            RezList.Clear();
+            PlayerRez = (0, 0);
             IterateActors();
         }
     }

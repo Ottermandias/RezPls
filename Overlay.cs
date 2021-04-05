@@ -10,17 +10,17 @@ using Dalamud.Plugin;
 using FFXIVClientStructs.Component.GUI;
 using ImGuiNET;
 
-namespace RezzPls
+namespace RezPls
 {
     public class Overlay : IDisposable
     {
         private readonly DalamudPluginInterface _pluginInterface;
         private readonly HudManager             _hudManager;
-        private readonly RezzPlsConfig          _config;
+        private readonly RezPlsConfig          _config;
         private readonly ActorWatcher           _actorWatcher;
 
-        private IReadOnlyDictionary<uint, uint> Rezzes
-            => _actorWatcher.RezzList;
+        private IReadOnlyDictionary<uint, uint> Resurrections
+            => _actorWatcher.RezList;
 
         private IReadOnlyDictionary<uint, string> Names
             => _actorWatcher.ActorNames;
@@ -28,8 +28,8 @@ namespace RezzPls
         private IReadOnlyDictionary<uint, Position3> Positions
             => _actorWatcher.ActorPositions;
 
-        private (uint, uint) PlayerRezz
-            => _actorWatcher.PlayerRezz;
+        private (uint, uint) PlayerRez
+            => _actorWatcher.PlayerRez;
 
         private bool _enabled = false;
 
@@ -51,15 +51,15 @@ namespace RezzPls
             _pluginInterface.UiBuilder.OnBuildUi -= Draw;
         }
 
-        private readonly        ImGuiScene.TextureWrap? _rezzIcon;
+        private readonly        ImGuiScene.TextureWrap? _raiseIcon;
         private static readonly Vector4                 BlackColor = new(0, 0, 0, 1);
         private static readonly Vector4                 WhiteColor = new(1, 1, 1, 1);
 
-        private static ImGuiScene.TextureWrap? BuildRezzIcon(DalamudPluginInterface pi)
+        private static ImGuiScene.TextureWrap? BuildRaiseIcon(DalamudPluginInterface pi)
         {
-            const int rezzIconId = 10406;
+            const int raiseIconId = 10406;
 
-            var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("RezzPls.RezzIcon");
+            var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("RezPls.RaiseIcon");
             if (resource != null)
             {
                 using MemoryStream ms = new();
@@ -70,16 +70,16 @@ namespace RezzPls
                     return wrap;
             }
 
-            var texFile = pi.Data.GetIcon(rezzIconId);
+            var texFile = pi.Data.GetIcon(raiseIconId);
             return pi.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
         }
 
-        public Overlay(DalamudPluginInterface pluginInterface, ActorWatcher actorWatcher, RezzPlsConfig config)
+        public Overlay(DalamudPluginInterface pluginInterface, ActorWatcher actorWatcher, RezPlsConfig config)
         {
             _pluginInterface = pluginInterface;
             _actorWatcher    = actorWatcher;
             _hudManager      = new HudManager(_pluginInterface.TargetModuleScanner);
-            _rezzIcon        = BuildRezzIcon(_pluginInterface);
+            _raiseIcon        = BuildRaiseIcon(_pluginInterface);
             _config          = config;
         }
 
@@ -87,19 +87,19 @@ namespace RezzPls
         {
             Disable();
             _hudManager.Dispose();
-            _rezzIcon?.Dispose();
+            _raiseIcon?.Dispose();
         }
 
         public void DrawInWorld(SharpDX.Vector2 pos, string text)
         {
-            if (_rezzIcon == null)
+            if (_raiseIcon == null)
                 return;
 
             if (_config.ShowIcon)
             {
-                Vector2 scaledIconSize = new(_rezzIcon.Width * _config.IconScale, _rezzIcon.Height * _config.IconScale);
+                Vector2 scaledIconSize = new(_raiseIcon.Width * _config.IconScale, _raiseIcon.Height * _config.IconScale);
                 ImGui.SetCursorPos(new Vector2(pos.X - scaledIconSize.X / 2f, pos.Y - scaledIconSize.Y));
-                ImGui.Image(_rezzIcon.ImGuiHandle, scaledIconSize);
+                ImGui.Image(_raiseIcon.ImGuiHandle, scaledIconSize);
             }
 
             if (_config.ShowInWorldText)
@@ -113,7 +113,7 @@ namespace RezzPls
         private static unsafe string TextNodeToString(AtkTextNode* node)
             => Marshal.PtrToStringAnsi(new IntPtr(node->NodeText.StringPtr))!;
 
-        public ImDrawListPtr? BeginRezzRects()
+        public ImDrawListPtr? BeginRezRects()
         {
             const ImGuiWindowFlags flags = ImGuiWindowFlags.NoDecoration
               | ImGuiWindowFlags.NoSavedSettings
@@ -124,7 +124,7 @@ namespace RezzPls
               | ImGuiWindowFlags.NoNav;
             ImGui.SetNextWindowPos(Vector2.Zero);
             ImGui.SetNextWindowSize(ImGui.GetIO().DisplaySize);
-            return !ImGui.Begin("##rezzRects", flags) ? null : ImGui.GetWindowDrawList();
+            return !ImGui.Begin("##rezRects", flags) ? null : ImGui.GetWindowDrawList();
         }
 
         private static unsafe Vector2 GetNodePosition(AtkResNode* node)
@@ -241,8 +241,8 @@ namespace RezzPls
                     {
                         uint color;
                         if (caster == 0)
-                            color = PlayerRezz.Item1 != corpse ? _config.RaisedColor : _config.DoubleRaiseColor;
-                        else if (corpse == PlayerRezz.Item1 && caster != PlayerRezz.Item2)
+                            color = PlayerRez.Item1 != corpse ? _config.RaisedColor : _config.DoubleRaiseColor;
+                        else if (corpse == PlayerRez.Item1 && caster != PlayerRez.Item2)
                             color = _config.DoubleRaiseColor;
                         else
                             color = _config.CurrentlyRaisingColor;
@@ -270,18 +270,18 @@ namespace RezzPls
                     DrawInWorld(screenPos, caster == 0 ? "Already Raised" : $"Raise: {name}");
             }
 
-            foreach (var kvp in Rezzes)
+            foreach (var kvp in Resurrections)
                 DrawRect(kvp.Key, kvp.Value);
         }
 
         public void Draw()
         {
-            if (Rezzes.Count == 0)
+            if (Resurrections.Count == 0)
                 return;
 
             try
             {
-                var drawPtrOpt = BeginRezzRects();
+                var drawPtrOpt = BeginRezRects();
                 if (drawPtrOpt == null)
                     return;
 

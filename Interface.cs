@@ -3,13 +3,13 @@ using System.Numerics;
 using Dalamud.Plugin;
 using ImGuiNET;
 
-namespace RezzPls
+namespace RezPls
 {
     public class Interface : IDisposable
     {
         private readonly DalamudPluginInterface _pi;
-        private readonly RezzPls                _plugin;
-        private readonly RezzPlsConfig          _config;
+        private readonly RezPls                 _plugin;
+        private readonly RezPlsConfig           _config;
 
         public bool Visible = false;
 
@@ -22,7 +22,7 @@ namespace RezzPls
             _plugin.Save();
         }
 
-        public Interface(DalamudPluginInterface pi, RezzPls plugin, RezzPlsConfig config)
+        public Interface(DalamudPluginInterface pi, RezPls plugin, RezPlsConfig config)
         {
             _pi     = pi;
             _plugin = plugin;
@@ -128,10 +128,10 @@ namespace RezzPls
             if (!ImGui.Button("Reset Colors to Default", new Vector2(-1, 0)))
                 return;
 
-            _config.CurrentlyRaisingColor  = RezzPlsConfig.DefaultCurrentlyRaisingColor;
-            _config.RaisedColor            = RezzPlsConfig.DefaultRaisedColor;
-            _config.DoubleRaiseColor       = RezzPlsConfig.DefaultDoubleRaiseColor;
-            _config.InWorldBackgroundColor = RezzPlsConfig.DefaultInWorldBackgroundColor;
+            _config.CurrentlyRaisingColor  = RezPlsConfig.DefaultCurrentlyRaisingColor;
+            _config.RaisedColor            = RezPlsConfig.DefaultRaisedColor;
+            _config.DoubleRaiseColor       = RezPlsConfig.DefaultDoubleRaiseColor;
+            _config.InWorldBackgroundColor = RezPlsConfig.DefaultInWorldBackgroundColor;
             _plugin.Save();
         }
 
@@ -150,7 +150,7 @@ namespace RezzPls
             var constraints = new Vector2(width, height);
             ImGui.SetNextWindowSizeConstraints(constraints, constraints);
 
-            if (!ImGui.Begin("RezzPls Configuration", ref Visible, ImGuiWindowFlags.NoResize))
+            if (!ImGui.Begin("RezPls Configuration", ref Visible, ImGuiWindowFlags.NoResize))
                 return;
 
 
