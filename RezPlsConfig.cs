@@ -3,7 +3,7 @@ using Dalamud.Configuration;
 
 namespace RezPls
 {
-    public enum RectType
+    public enum RectType : byte
     {
         Fill = 0,
         OnlyOutline,
@@ -25,9 +25,10 @@ namespace RezPls
         public uint     CurrentlyRaisingColor  { get; set; } = DefaultCurrentlyRaisingColor;
         public uint     DoubleRaiseColor       { get; set; } = DefaultDoubleRaiseColor;
         public uint     InWorldBackgroundColor { get; set; } = DefaultInWorldBackgroundColor;
-        public bool     Enabled                { get; set; } = true;
         public RectType RectType               { get; set; } = RectType.FillAndFullAlphaOutline;
+        public bool     Enabled                { get; set; } = true;
         public bool     ShowIcon               { get; set; } = true;
+        public bool     RestrictedJobs         { get; set; } = false;
         public bool     ShowInWorldText        { get; set; } = true;
         public bool     ShowCasterNames        { get; set; } = true;
         public bool     ShowAllianceFrame      { get; set; } = true;

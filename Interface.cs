@@ -79,6 +79,13 @@ namespace RezPls
                 "Writes the current resurrector under a corpse currently being raised, or that he is already raised.", _config.ShowInWorldText,
                 e => _config.ShowInWorldText = e);
 
+        private void DrawRestrictJobsCheckbox()
+            => DrawCheckbox("Restrict to resurrecting Jobs",
+                "Only display the resurrecting information when you are a job with inherent raise capabilities.\n"
+              + "CNJ, WHM, ACN, SCH, SMN, AST, BLU, RDM (at 64+)."
+              + "Ignores Lost and Logos Actions.\n", _config.RestrictedJobs,
+                e => _config.RestrictedJobs = e);
+
         private void DrawColorPicker(string name, string tooltip, uint value, Action<uint> setter)
         {
             const ImGuiColorEditFlags flags = ImGuiColorEditFlags.AlphaPreviewHalf;
@@ -172,6 +179,7 @@ namespace RezPls
 
 
             DrawEnabledCheckbox();
+            DrawRestrictJobsCheckbox();
             ImGui.Dummy(horizontalSpacing);
             DrawShowGroupCheckbox();
             DrawShowAllianceCheckbox();

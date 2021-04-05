@@ -306,6 +306,14 @@ namespace RezPls
             if (Resurrections.Count == 0)
                 return;
 
+            if (_config.RestrictedJobs)
+            {
+                var (job, level) = _actorWatcher.CurrentPlayerJob();
+
+                if (!job.CanRaise() || (job == Job.RDM && level < 64))
+                    return;
+            }
+
             try
             {
                 var drawPtrOpt = BeginRezRects();

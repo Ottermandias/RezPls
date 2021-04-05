@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Actors;
+using Dalamud.Game.ClientState.Actors.Resolvers;
 using Dalamud.Game.Internal;
 using Dalamud.Plugin;
 
@@ -51,6 +52,15 @@ namespace RezPls
 
         public void Dispose()
             => Disable();
+
+        public unsafe (Job job, byte level) CurrentPlayerJob()
+        {
+            var player = *(byte**) _actorTablePtr;
+            if (player == null || !IsPlayer(player))
+                return (Job.ADV, 0);
+
+            return (PlayerJob(player), PlayerLevel(player));
+        }
 
         private static unsafe ushort GetCurrentCast(byte* actorPtr)
         {
@@ -123,6 +133,18 @@ namespace RezPls
             const int currentHpOffset = 0x1C4;
 
             return *(int*) (actorPtr + currentHpOffset) == 0;
+        }
+
+        private static unsafe Job PlayerJob(byte* actorPtr)
+        {
+            const int jobOffset = 0x1E2;
+            return *(Job*) (actorPtr + jobOffset);
+        }
+
+        private static unsafe byte PlayerLevel(byte* actorPtr)
+        {
+            const int jobOffset = 0x1E3;
+            return *(actorPtr + jobOffset);
         }
 
         private static unsafe bool IsRaised(byte* actorPtr)
