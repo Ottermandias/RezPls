@@ -13,7 +13,7 @@ namespace RezPls
 
         public bool Visible = false;
 
-        private void ChangeAndSafe<T>(T value, T currentValue, Action<T> setter) where T : IEquatable<T>
+        private void ChangeAndSave<T>(T value, T currentValue, Action<T> setter) where T : IEquatable<T>
         {
             if (value.Equals(currentValue))
                 return;
@@ -36,7 +36,7 @@ namespace RezPls
         {
             var tmp = value;
             if (ImGui.Checkbox(name, ref tmp))
-                ChangeAndSafe(tmp, value, setter);
+                ChangeAndSave(tmp, value, setter);
 
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip(tooltip);
@@ -85,7 +85,7 @@ namespace RezPls
 
             var tmp = ImGui.ColorConvertU32ToFloat4(value);
             if (ImGui.ColorEdit4(name, ref tmp, flags))
-                ChangeAndSafe(ImGui.ColorConvertFloat4ToU32(tmp), value, setter);
+                ChangeAndSave(ImGui.ColorConvertFloat4ToU32(tmp), value, setter);
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip(tooltip);
         }
@@ -118,9 +118,26 @@ namespace RezPls
 
             var tmp = _config.IconScale;
             if (ImGui.DragFloat("In World Icon Scale", ref tmp, step, min, max))
-                ChangeAndSafe(tmp, _config.IconScale, f => _config.IconScale = Math.Max(min, Math.Min(f, max)));
+                ChangeAndSave(tmp, _config.IconScale, f => _config.IconScale = Math.Max(min, Math.Min(f, max)));
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Set the scale of the Raised icon that is drawn into the world on raised corpses.");
+        }
+
+        private static readonly string[] RectTypeStrings = new[]
+        {
+            "Fill",
+            "Only Outline",
+            "Only Full Alpha Outline",
+            "Fill and Full Alpha Outline",
+        };
+
+        private void DrawRectTypeSelector()
+        {
+            var type = (int) _config.RectType;
+            if (!ImGui.Combo("Rectangle Type", ref type, RectTypeStrings, RectTypeStrings.Length))
+                return;
+
+            ChangeAndSave(type, (int) _config.RectType, t => _config.RectType = (RectType) t);
         }
 
         private void DrawResetColorsButton()
@@ -159,6 +176,7 @@ namespace RezPls
             DrawShowGroupCheckbox();
             DrawShowAllianceCheckbox();
             DrawShowCasterNamesCheckbox();
+            DrawRectTypeSelector();
             ImGui.Dummy(horizontalSpacing);
             DrawCurrentRaiseColorPicker();
             DrawAlreadyRaisedColorPicker();

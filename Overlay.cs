@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Numerics;
 using System.Reflection;
@@ -170,7 +171,30 @@ namespace RezPls
         private static readonly Vector2 GreenBoxSizeOffset     = new(8, 10);
         private const           float   GreenBoxEdgeRounding   = 10;
 
-        private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AtkUnitBase* partyList, int idx, uint color, bool names,
+        private static void DrawRect(ImDrawListPtr drawPtr, Vector2 rectMin, Vector2 rectMax, uint color, float rounding, RectType type)
+        {
+            switch (type)
+            {
+                case RectType.Fill:
+                    drawPtr.AddRectFilled(rectMin, rectMax, color, rounding);
+                    break;
+                case RectType.OnlyOutline:
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding);
+                    break;
+                case RectType.OnlyFullAlphaOutline:
+                    color |= 0xFF000000;
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding);
+                    break;
+                case RectType.FillAndFullAlphaOutline:
+                    drawPtr.AddRectFilled(rectMin, rectMax, color, rounding);
+                    color |= 0xFF000000;
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding);
+                    break;
+                default: throw new InvalidEnumArgumentException();
+            }
+        }
+
+        private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AtkUnitBase* partyList, int idx, uint color, RectType type, bool names,
             string caster = "")
         {
             idx = 17 - idx;
@@ -178,7 +202,8 @@ namespace RezPls
             var colNode  = nodePtr->Component->ULDData.NodeList[2];
             var rectMin  = GetNodePosition(colNode) + GreenBoxPositionOffset * partyList->Scale;
             var rectSize = (new Vector2(colNode->Width, colNode->Height) - GreenBoxSizeOffset) * partyList->Scale;
-            drawPtr.AddRectFilled(rectMin, rectMin + rectSize, color, GreenBoxEdgeRounding * partyList->Scale);
+
+            DrawRect(drawPtr, rectMin, rectMin + rectSize, color, GreenBoxEdgeRounding * partyList->Scale, type);
             if (!names || caster.Length <= 0)
                 return;
 
@@ -187,17 +212,17 @@ namespace RezPls
             TextShadowed(caster, WhiteColor, BlackColor, 2);
         }
 
-        private static unsafe void DrawAllianceRect(ImDrawListPtr drawPtr, AtkUnitBase* allianceList, int idx, uint color, bool names,
+        private static unsafe void DrawAllianceRect(ImDrawListPtr drawPtr, AtkUnitBase* allianceList, int idx, uint color, RectType type, bool names,
             string caster = "")
         {
             idx = 9 - idx;
             var nodePtr  = allianceList->ULDData.NodeList[idx];
             var comp     = ((AtkComponentNode*) nodePtr)->Component;
             var gridNode = comp->ULDData.NodeList[2]->ChildNode;
-            var rectMin  = GetNodePosition(gridNode) + new Vector2(5 * allianceList->Scale, 5 * allianceList->Scale);
-            var rectSize = new Vector2(gridNode->Width * allianceList->Scale, gridNode->Height * allianceList->Scale)
-              - new Vector2(8 * allianceList->Scale,                          10 * allianceList->Scale);
-            drawPtr.AddRectFilled(rectMin, rectMin + rectSize, color, 10 * allianceList->Scale);
+            var rectMin  = GetNodePosition(gridNode) + GreenBoxPositionOffset * allianceList->Scale;
+            var rectSize = (new Vector2(gridNode->Width, gridNode->Height) - GreenBoxSizeOffset) * allianceList->Scale;
+
+            DrawRect(drawPtr, rectMin, rectMin + rectSize, color, GreenBoxEdgeRounding * allianceList->Scale, type);
             if (!names || caster.Length <= 0)
                 return;
 
@@ -253,15 +278,15 @@ namespace RezPls
                         {
                             case 0:
                                 if (drawParty)
-                                    DrawPartyRect(drawPtr, party, group.Value.idx, color, _config.ShowCasterNames, name);
+                                    DrawPartyRect(drawPtr, party, group.Value.idx, color, _config.RectType, _config.ShowCasterNames, name);
                                 break;
                             case 1:
                                 if (drawAlliance1)
-                                    DrawAllianceRect(drawPtr, alliance1, group.Value.idx, color, _config.ShowCasterNames, name);
+                                    DrawAllianceRect(drawPtr, alliance1, group.Value.idx, color, _config.RectType, _config.ShowCasterNames, name);
                                 break;
                             case 2:
                                 if (drawAlliance2)
-                                    DrawAllianceRect(drawPtr, alliance2, group.Value.idx, color, _config.ShowCasterNames, name);
+                                    DrawAllianceRect(drawPtr, alliance2, group.Value.idx, color, _config.RectType, _config.ShowCasterNames, name);
                                 break;
                         }
                     }
