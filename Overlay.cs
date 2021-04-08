@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Dalamud.Data.LuminaExtensions;
 using Dalamud.Game.ClientState.Actors;
+using Dalamud.Interface;
 using Dalamud.Plugin;
 using FFXIVClientStructs.Component.GUI;
 using ImGuiNET;
@@ -98,15 +99,15 @@ namespace RezPls
 
             if (_config.ShowIcon)
             {
-                Vector2 scaledIconSize = new(_raiseIcon.Width * _config.IconScale, _raiseIcon.Height * _config.IconScale);
-                ImGui.SetCursorPos(new Vector2(pos.X - scaledIconSize.X / 2f, pos.Y - scaledIconSize.Y));
+                var scaledIconSize = new Vector2(_raiseIcon.Width, _raiseIcon.Height) * _config.IconScale * ImGui.GetIO().FontGlobalScale;
+                ImGui.SetCursorPos(new Vector2(pos.X - scaledIconSize.X / 2f, pos.Y - scaledIconSize.Y) - ImGui.GetMainViewport().Pos);
                 ImGui.Image(_raiseIcon.ImGuiHandle, scaledIconSize);
             }
 
             if (_config.ShowInWorldText)
             {
                 var textSize = ImGui.CalcTextSize(text);
-                ImGui.SetCursorPos(new Vector2(pos.X, pos.Y) - textSize / 2);
+                ImGui.SetCursorPos(new Vector2(pos.X, pos.Y) - textSize / 2 - ImGui.GetMainViewport().Pos);
                 ImGui.Button(text);
             }
         }
@@ -116,8 +117,6 @@ namespace RezPls
 
         public ImDrawListPtr? BeginRezRects()
         {
-            ImGui.SetNextWindowViewport(ImGui.GetMainViewport().ID);
-
             const ImGuiWindowFlags flags = ImGuiWindowFlags.NoDecoration
               | ImGuiWindowFlags.NoSavedSettings
               | ImGuiWindowFlags.NoMove
@@ -125,8 +124,10 @@ namespace RezPls
               | ImGuiWindowFlags.NoFocusOnAppearing
               | ImGuiWindowFlags.NoBackground
               | ImGuiWindowFlags.NoNav;
-            ImGui.SetNextWindowPos(Vector2.Zero);
-            ImGui.SetNextWindowSize(ImGui.GetIO().DisplaySize);
+
+            ImGuiHelpers.ForceMainViewport();
+            ImGui.SetNextWindowPos(ImGui.GetMainViewport().Pos);
+            ImGui.SetNextWindowSize(ImGui.GetMainViewport().Size);
             return !ImGui.Begin("##rezRects", flags) ? null : ImGui.GetWindowDrawList();
         }
 
@@ -173,6 +174,8 @@ namespace RezPls
 
         private static void DrawRect(ImDrawListPtr drawPtr, Vector2 rectMin, Vector2 rectMax, uint color, float rounding, RectType type)
         {
+            rectMin += ImGui.GetMainViewport().Pos;
+            rectMax += ImGui.GetMainViewport().Pos;
             switch (type)
             {
                 case RectType.Fill:
@@ -258,7 +261,7 @@ namespace RezPls
 
             var anyParty = drawParty || drawAlliance1 || drawAlliance2;
 
-            void DrawRect(uint corpse, uint caster)
+            void DrawWhichRect(uint corpse, uint caster)
             {
                 var name = GetActorName(corpse, caster);
                 if (anyParty)
@@ -298,7 +301,7 @@ namespace RezPls
             }
 
             foreach (var kvp in Resurrections)
-                DrawRect(kvp.Key, kvp.Value);
+                DrawWhichRect(kvp.Key, kvp.Value);
         }
 
         public void Draw()
@@ -319,7 +322,6 @@ namespace RezPls
                 var drawPtrOpt = BeginRezRects();
                 if (drawPtrOpt == null)
                     return;
-
                 var drawPtr = drawPtrOpt.Value;
 
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.InWorldBackgroundColor);

@@ -19,7 +19,7 @@ namespace RezPls
         public readonly Dictionary<uint, uint>      RezList        = new(128);
         public readonly Dictionary<uint, string>    ActorNames     = new();
         public readonly Dictionary<uint, Position3> ActorPositions = new();
-        public          (uint, uint)                PlayerRez      = (0, 0);
+        public          (uint, uint)                PlayerRez      = (0, uint.MaxValue);
 
         public ActorWatcher(DalamudPluginInterface pluginInterface)
         {
@@ -208,7 +208,7 @@ namespace RezPls
         public void OnFrameworkUpdate(object _)
         {
             RezList.Clear();
-            PlayerRez = (0, 0);
+            PlayerRez = (0, PlayerRez.Item2);
             IterateActors();
         }
     }
