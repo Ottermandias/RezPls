@@ -167,9 +167,9 @@ namespace RezPls
             var buttonHeight      = ImGui.GetFontSize() + ImGui.GetStyle().FramePadding.Y * 2;
             var horizontalSpacing = new Vector2(0, ImGui.GetTextLineHeightWithSpacing());
 
-            var height = 13 * buttonHeight
+            var height = 15 * buttonHeight
               + 6 * horizontalSpacing.Y
-              + 20 * ImGui.GetStyle().ItemSpacing.Y;
+              + 22 * ImGui.GetStyle().ItemSpacing.Y;
             var width       = 450 * ImGui.GetIO().FontGlobalScale;
             var constraints = new Vector2(width, height);
             ImGui.SetNextWindowSizeConstraints(constraints, constraints);

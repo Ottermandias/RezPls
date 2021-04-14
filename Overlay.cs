@@ -125,7 +125,7 @@ namespace RezPls
               | ImGuiWindowFlags.NoBackground
               | ImGuiWindowFlags.NoNav;
 
-            ImGuiHelpers.ForceMainViewport();
+            ImGuiHelpers.ForceNextWindowMainViewport();
             ImGui.SetNextWindowPos(ImGui.GetMainViewport().Pos);
             ImGui.SetNextWindowSize(ImGui.GetMainViewport().Size);
             return !ImGui.Begin("##rezRects", flags) ? null : ImGui.GetWindowDrawList();

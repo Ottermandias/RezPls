@@ -64,13 +64,13 @@ namespace RezPls
 
         private static unsafe ushort GetCurrentCast(byte* actorPtr)
         {
-            const int currentCastIdOffset = 0x1B64;
+            const int currentCastIdOffset = 0x1B84;
             return *(ushort*) (actorPtr + currentCastIdOffset);
         }
 
         private static unsafe uint GetCastTarget(byte* actorPtr)
         {
-            const int currentCastTargetOffset = 0x1B70;
+            const int currentCastTargetOffset = 0x1B90;
             return *(uint*) (actorPtr + currentCastTargetOffset);
         }
 
@@ -149,7 +149,7 @@ namespace RezPls
 
         private static unsafe bool IsRaised(byte* actorPtr)
         {
-            const int statusEffectsOffset = 0x19D8;
+            const int statusEffectsOffset = 0x19F8;
             const int statusEffectSize    = 12;
             const int maxStatusEffects    = 20;
 
