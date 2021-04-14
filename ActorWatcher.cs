@@ -101,23 +101,21 @@ namespace RezPls
 
         private static unsafe bool IsCastingResurrection(byte* actorPtr)
         {
-            switch (GetCurrentCast(actorPtr))
+            return GetCurrentCast(actorPtr) switch
             {
-                case 173:   // ACN, SMN, SCH
-                case 125:   // CNH, WHM
-                case 3603:  // AST
-                case 18317: // BLU
-                case 208:   // WHM LB3
-                case 4247:  // SCH LB3
-                case 4248:  // AST LB3
-                case 7523:  // RDM
-                case 22345: // Lost Sacrifice, Bozja
-                case 20730: // Lost Arise, Bozja
-                case 12996: // Raise L, Eureka
-                    return true;
-            }
-
-            return false;
+                173   => true, // ACN, SMN, SCH
+                125   => true, // CNH, WHM
+                3603  => true, // AST
+                18317 => true, // BLU
+                208   => true, // WHM LB3
+                4247  => true, // SCH LB3
+                4248  => true, // AST LB3
+                7523  => true, // RDM
+                22345 => true, // Lost Sacrifice, Bozja
+                20730 => true, // Lost Arise, Bozja
+                12996 => true, // Raise L, Eureka
+                _     => false,
+            };
         }
 
         private static unsafe bool IsPlayer(byte* actorPtr)
