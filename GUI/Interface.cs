@@ -3,10 +3,13 @@ using System.Numerics;
 using Dalamud.Plugin;
 using ImGuiNET;
 
-namespace RezPls
+namespace RezPls.GUI
 {
     public class Interface : IDisposable
     {
+        public const string PluginName = "RezPls";
+
+        private readonly string                 _configHeader;
         private readonly DalamudPluginInterface _pi;
         private readonly RezPls                 _plugin;
         private readonly RezPlsConfig           _config;
@@ -24,9 +27,10 @@ namespace RezPls
 
         public Interface(DalamudPluginInterface pi, RezPls plugin, RezPlsConfig config)
         {
-            _pi     = pi;
-            _plugin = plugin;
-            _config = config;
+            _pi           = pi;
+            _plugin       = plugin;
+            _config       = config;
+            _configHeader = RezPls.Version.Length > 0 ? $"{PluginName} v{RezPls.Version}" : PluginName;
 
             _pi.UiBuilder.OnBuildUi      += Draw;
             _pi.UiBuilder.OnOpenConfigUi += Enable;
@@ -174,33 +178,36 @@ namespace RezPls
             var constraints = new Vector2(width, height);
             ImGui.SetNextWindowSizeConstraints(constraints, constraints);
 
-            if (!ImGui.Begin("RezPls Configuration", ref Visible, ImGuiWindowFlags.NoResize))
+            if (!ImGui.Begin(_configHeader, ref Visible, ImGuiWindowFlags.NoResize))
                 return;
 
+            try
+            {
+                DrawEnabledCheckbox();
+                DrawRestrictJobsCheckbox();
+                ImGui.Dummy(horizontalSpacing);
+                DrawShowGroupCheckbox();
+                DrawShowAllianceCheckbox();
+                DrawShowCasterNamesCheckbox();
+                DrawRectTypeSelector();
+                ImGui.Dummy(horizontalSpacing);
+                DrawCurrentRaiseColorPicker();
+                DrawAlreadyRaisedColorPicker();
+                DrawDoubleRaiseColorPicker();
+                ImGui.Dummy(horizontalSpacing);
+                DrawShowInWorldTextCheckbox();
+                DrawShowIconCheckbox();
+                ImGui.Dummy(horizontalSpacing);
+                DrawInWorldBackgroundColorPicker();
+                DrawScaleButton();
 
-            DrawEnabledCheckbox();
-            DrawRestrictJobsCheckbox();
-            ImGui.Dummy(horizontalSpacing);
-            DrawShowGroupCheckbox();
-            DrawShowAllianceCheckbox();
-            DrawShowCasterNamesCheckbox();
-            DrawRectTypeSelector();
-            ImGui.Dummy(horizontalSpacing);
-            DrawCurrentRaiseColorPicker();
-            DrawAlreadyRaisedColorPicker();
-            DrawDoubleRaiseColorPicker();
-            ImGui.Dummy(horizontalSpacing);
-            DrawShowInWorldTextCheckbox();
-            DrawShowIconCheckbox();
-            ImGui.Dummy(horizontalSpacing);
-            DrawInWorldBackgroundColorPicker();
-            DrawScaleButton();
-
-            ImGui.Dummy(2 * horizontalSpacing);
-            DrawResetColorsButton();
-
-
-            ImGui.End();
+                ImGui.Dummy(2 * horizontalSpacing);
+                DrawResetColorsButton();
+            }
+            finally
+            {
+                ImGui.End();
+            }
         }
 
         public void Enable(object _1, object _2)

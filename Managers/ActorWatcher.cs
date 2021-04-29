@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Actors;
-using Dalamud.Game.ClientState.Actors.Resolvers;
 using Dalamud.Game.Internal;
 using Dalamud.Plugin;
+using RezPls.Enums;
 
-namespace RezPls
+namespace RezPls.Managers
 {
     public class ActorWatcher : IDisposable
     {

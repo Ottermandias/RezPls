@@ -11,8 +11,10 @@ using Dalamud.Interface;
 using Dalamud.Plugin;
 using FFXIVClientStructs.Component.GUI;
 using ImGuiNET;
+using RezPls.Enums;
+using RezPls.Managers;
 
-namespace RezPls
+namespace RezPls.GUI
 {
     public class Overlay : IDisposable
     {
@@ -317,23 +319,25 @@ namespace RezPls
                     return;
             }
 
+            var drawPtrOpt = BeginRezRects();
+            if (drawPtrOpt == null)
+                return;
             try
             {
-                var drawPtrOpt = BeginRezRects();
-                if (drawPtrOpt == null)
-                    return;
                 var drawPtr = drawPtrOpt.Value;
 
-                ImGui.PushStyleColor(ImGuiCol.Button, _config.InWorldBackgroundColor);
+                using var color = new ImGuiRaii()
+                    .PushColor(ImGuiCol.Button, _config.InWorldBackgroundColor);
 
                 DrawOnPartyFrames(drawPtr);
-
-                ImGui.PopStyleColor();
-                ImGui.End();
             }
             catch (Exception e)
             {
                 PluginLog.Error(e, "");
+            }
+            finally
+            {
+                ImGui.End();
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿namespace RezPls
+﻿namespace RezPls.Enums
 {
     public enum Job : byte
     {

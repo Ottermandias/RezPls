@@ -1,5 +1,8 @@
-﻿using Dalamud.Game.Command;
+﻿using System.Reflection;
+using Dalamud.Game.Command;
 using Dalamud.Plugin;
+using RezPls.GUI;
+using RezPls.Managers;
 
 namespace RezPls
 {
@@ -7,6 +10,8 @@ namespace RezPls
     {
         public string Name
             => "RezPls";
+
+        public static string Version = "";
 
         private DalamudPluginInterface? _pluginInterface;
         private ActorWatcher?           _actorWatcher;
@@ -17,6 +22,7 @@ namespace RezPls
         public void Initialize(DalamudPluginInterface pluginInterface)
         {
             _pluginInterface = pluginInterface;
+            Version          = Assembly.GetExecutingAssembly()?.GetName().Version.ToString() ?? "";
             _config          = _pluginInterface.GetPluginConfig() as RezPlsConfig;
             if (_config == null)
             {

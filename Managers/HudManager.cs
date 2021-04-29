@@ -4,7 +4,7 @@ using Dalamud.Hooking;
 using Dalamud.Plugin;
 using RezPls.SeFunctions;
 
-namespace RezPls
+namespace RezPls.Managers
 {
     public unsafe class HudManager : IDisposable
     {
