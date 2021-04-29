@@ -64,7 +64,13 @@ namespace RezPls.Managers
 
         private static unsafe ushort GetCurrentCast(byte* actorPtr)
         {
-            const int currentCastIdOffset = 0x1B84;
+            const int    currentCastTypeOffset = 0x1B82;
+            const int    currentCastIdOffset   = 0x1B84;
+            const ushort currentCastIdSpell    = 0x01;
+
+            if (*(actorPtr + currentCastTypeOffset) != currentCastIdSpell)
+                return 0;
+
             return *(ushort*) (actorPtr + currentCastIdOffset);
         }
 
