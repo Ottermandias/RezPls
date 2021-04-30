@@ -68,7 +68,7 @@ namespace RezPls.Managers
             const int    currentCastIdOffset   = 0x1B84;
             const ushort currentCastIdSpell    = 0x01;
 
-            if (*(actorPtr + currentCastTypeOffset) != currentCastIdSpell)
+            if (*(ushort*) (actorPtr + currentCastTypeOffset) != currentCastIdSpell)
                 return 0;
 
             return *(ushort*) (actorPtr + currentCastIdOffset);

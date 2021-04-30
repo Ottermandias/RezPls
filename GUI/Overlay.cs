@@ -9,7 +9,7 @@ using Dalamud.Data.LuminaExtensions;
 using Dalamud.Game.ClientState.Actors;
 using Dalamud.Interface;
 using Dalamud.Plugin;
-using FFXIVClientStructs.Component.GUI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using RezPls.Enums;
 using RezPls.Managers;
@@ -203,8 +203,8 @@ namespace RezPls.GUI
             string caster = "")
         {
             idx = 17 - idx;
-            var nodePtr  = (AtkComponentNode*) partyList->ULDData.NodeList[idx];
-            var colNode  = nodePtr->Component->ULDData.NodeList[2];
+            var nodePtr  = (AtkComponentNode*) partyList->UldManager.NodeList[idx];
+            var colNode  = nodePtr->Component->UldManager.NodeList[2];
             var rectMin  = GetNodePosition(colNode) + GreenBoxPositionOffset * partyList->Scale;
             var rectSize = (new Vector2(colNode->Width, colNode->Height) - GreenBoxSizeOffset) * partyList->Scale;
 
@@ -221,9 +221,9 @@ namespace RezPls.GUI
             string caster = "")
         {
             idx = 9 - idx;
-            var nodePtr  = allianceList->ULDData.NodeList[idx];
+            var nodePtr  = allianceList->UldManager.NodeList[idx];
             var comp     = ((AtkComponentNode*) nodePtr)->Component;
-            var gridNode = comp->ULDData.NodeList[2]->ChildNode;
+            var gridNode = comp->UldManager.NodeList[2]->ChildNode;
             var rectMin  = GetNodePosition(gridNode) + GreenBoxPositionOffset * allianceList->Scale;
             var rectSize = (new Vector2(gridNode->Width, gridNode->Height) - GreenBoxSizeOffset) * allianceList->Scale;
 
