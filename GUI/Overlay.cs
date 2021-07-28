@@ -20,7 +20,7 @@ namespace RezPls.GUI
     {
         private readonly DalamudPluginInterface _pluginInterface;
         private readonly HudManager             _hudManager;
-        private readonly RezPlsConfig          _config;
+        private readonly RezPlsConfig           _config;
         private readonly ActorWatcher           _actorWatcher;
 
         private IReadOnlyDictionary<uint, uint> Resurrections
@@ -83,7 +83,7 @@ namespace RezPls.GUI
             _pluginInterface = pluginInterface;
             _actorWatcher    = actorWatcher;
             _hudManager      = new HudManager(_pluginInterface.TargetModuleScanner);
-            _raiseIcon        = BuildRaiseIcon(_pluginInterface);
+            _raiseIcon       = BuildRaiseIcon(_pluginInterface);
             _config          = config;
         }
 
@@ -217,7 +217,8 @@ namespace RezPls.GUI
             TextShadowed(caster, WhiteColor, BlackColor, 2);
         }
 
-        private static unsafe void DrawAllianceRect(ImDrawListPtr drawPtr, AtkUnitBase* allianceList, int idx, uint color, RectType type, bool names,
+        private static unsafe void DrawAllianceRect(ImDrawListPtr drawPtr, AtkUnitBase* allianceList, int idx, uint color, RectType type,
+            bool names,
             string caster = "")
         {
             idx = 9 - idx;
@@ -287,15 +288,20 @@ namespace RezPls.GUI
                                 break;
                             case 1:
                                 if (drawAlliance1)
-                                    DrawAllianceRect(drawPtr, alliance1, group.Value.idx, color, _config.RectType, _config.ShowCasterNames, name);
+                                    DrawAllianceRect(drawPtr, alliance1, group.Value.idx, color, _config.RectType, _config.ShowCasterNames,
+                                        name);
                                 break;
                             case 2:
                                 if (drawAlliance2)
-                                    DrawAllianceRect(drawPtr, alliance2, group.Value.idx, color, _config.RectType, _config.ShowCasterNames, name);
+                                    DrawAllianceRect(drawPtr, alliance2, group.Value.idx, color, _config.RectType, _config.ShowCasterNames,
+                                        name);
                                 break;
                         }
                     }
                 }
+
+                if (corpse == caster)
+                    return;
 
                 var pos = GetActorPosition(corpse);
                 if (pos != null && _pluginInterface.Framework.Gui.WorldToScreen(pos.Value, out var screenPos))
@@ -315,13 +321,14 @@ namespace RezPls.GUI
             {
                 var (job, level) = _actorWatcher.CurrentPlayerJob();
 
-                if (!job.CanRaise() || (job == Job.RDM && level < 64))
+                if (!job.CanRaise() || job == Job.RDM && level < 64)
                     return;
             }
 
             var drawPtrOpt = BeginRezRects();
             if (drawPtrOpt == null)
                 return;
+
             try
             {
                 var drawPtr = drawPtrOpt.Value;

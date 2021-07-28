@@ -30,7 +30,7 @@ namespace RezPls.GUI
             _pi           = pi;
             _plugin       = plugin;
             _config       = config;
-            _configHeader = RezPls.Version.Length > 0 ? $"{PluginName} v{RezPls.Version}" : PluginName;
+            _configHeader = RezPls.Version.Length > 0 ? $"{PluginName} v{RezPls.Version}###{PluginName}" : PluginName;
 
             _pi.UiBuilder.OnBuildUi      += Draw;
             _pi.UiBuilder.OnOpenConfigUi += Enable;
