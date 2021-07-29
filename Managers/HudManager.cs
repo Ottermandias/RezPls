@@ -20,7 +20,7 @@ namespace RezPls.Managers
         public HudManager(SigScanner scanner)
         {
             UpdateParty updateParty = new(scanner);
-            _updatePartyHook = updateParty.CreateHook(UpdatePartyHook, this)!;
+            _updatePartyHook = updateParty.CreateHook(UpdatePartyHook)!;
         }
 
         private readonly int[,] _idOffsets =
