@@ -56,6 +56,10 @@ namespace RezPls.GUI
                     _plugin.Disable();
             });
 
+        private void DrawEnabledRaiseCheckbox()
+            => DrawCheckbox("Enable Raise Highlighting",
+                "Highlight players being raised.", _config.EnabledRaise, e => _config.EnabledRaise = e);
+
         private void DrawShowGroupCheckbox()
             => DrawCheckbox("Highlight in Party Frames",
                 "Highlights players already raised or currently being raised in your party frames according to your color selection.",
@@ -90,13 +94,78 @@ namespace RezPls.GUI
               + "Ignores Lost and Logos Actions.\n", _config.RestrictedJobs,
                 e => _config.RestrictedJobs = e);
 
-        private void DrawColorPicker(string name, string tooltip, uint value, Action<uint> setter)
+        private void DrawDispelHighlightingCheckbox()
+            => DrawCheckbox("Enable Dispel Highlighting",
+                "Highlight players with dispellable status effects.",
+                _config.EnabledDispel, e => _config.EnabledDispel = e);
+
+        private void DrawRestrictJobsDispelCheckbox()
+            => DrawCheckbox("Restrict to dispelling Jobs",
+                "Only displays the dispelling information when you are a job with inherent dispel capabilities.\n"
+              + "CNJ, WHM, SCH, AST, BRD (at 35+), BLU",
+                _config.RestrictedJobsDispel, e => _config.RestrictedJobsDispel = e);
+
+        private void DrawStatusEffectList()
         {
-            const ImGuiColorEditFlags flags = ImGuiColorEditFlags.AlphaPreviewHalf;
+            if (ImGui.RadioButton("Ignored Statuses", !_config.InvertStatusSet))
+                ChangeAndSave(false, _config.InvertStatusSet, e => _config.InvertStatusSet = e);
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Highlight all dispellable status effects except for those in the list below.");
+            ImGui.SameLine();
+            if (ImGui.RadioButton("Monitored Statuses", _config.InvertStatusSet))
+                ChangeAndSave(true, _config.InvertStatusSet, e => _config.InvertStatusSet = e);
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Highlight only those dispellable status effects that are in the list below.");
+            if (ImGui.BeginCombo("##StatusListSelector", "Add Status..."))
+            {
+                for (var i = 0; i < _plugin.StatusSet.RestStatusSet.Count; ++i)
+                {
+                    var status = _plugin.StatusSet.RestStatusSet[i];
+                    if (ImGui.Selectable($"{status.Name}##status{status.RowId}"))
+                    {
+                        _plugin.StatusSet.Swap((ushort) status.RowId);
+                        --i;
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
+
+            if (ImGui.BeginListBox("##StatusList"))
+            {
+                for (var i = 0; i < _plugin.StatusSet.ListStatusSet.Count; ++i)
+                {
+                    var status = _plugin.StatusSet.ListStatusSet[i];
+                    if (ImGui.Selectable($"{status.Name}##status{status.RowId}"))
+                    {
+                        _plugin.StatusSet.Swap((ushort) status.RowId);
+                        --i;
+                    }
+                }
+
+                ImGui.EndListBox();
+            }
+
+            if (ImGui.Button("Clear list.", ImGui.GetItemRectSize().X * Vector2.UnitX))
+                _plugin.StatusSet.ClearList();
+        }
+
+
+        private void DrawColorPicker(string name, string tooltip, uint value, uint defaultValue, Action<uint> setter)
+        {
+            const ImGuiColorEditFlags flags = ImGuiColorEditFlags.AlphaPreviewHalf | ImGuiColorEditFlags.NoInputs;
 
             var tmp = ImGui.ColorConvertU32ToFloat4(value);
-            if (ImGui.ColorEdit4(name, ref tmp, flags))
+            if (ImGui.ColorEdit4($"##{name}", ref tmp, flags))
                 ChangeAndSave(ImGui.ColorConvertFloat4ToU32(tmp), value, setter);
+            ImGui.SameLine();
+            if (ImGui.Button($"Default##{name}"))
+                ChangeAndSave(defaultValue, value, setter);
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(
+                    $"Reset to default: #{defaultValue & 0xFF:X2}{(defaultValue >> 8) & 0xFF:X2}{(defaultValue >> 16) & 0xFF:X2}{defaultValue >> 24:X2}");
+            ImGui.SameLine();
+            ImGui.Text(name);
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip(tooltip);
         }
@@ -104,22 +173,32 @@ namespace RezPls.GUI
         private void DrawCurrentRaiseColorPicker()
             => DrawColorPicker("Currently Being Raised",
                 "The highlight color for a player that is currently being raised by other players or only by yourself.",
-                _config.CurrentlyRaisingColor, c => _config.CurrentlyRaisingColor = c);
+                _config.CurrentlyRaisingColor, RezPlsConfig.DefaultCurrentlyRaisingColor, c => _config.CurrentlyRaisingColor = c);
 
         private void DrawAlreadyRaisedColorPicker()
             => DrawColorPicker("Already Raised",
                 "The highlight color for a player that is already raised and not also currently being raised by yourself.",
-                _config.RaisedColor, c => _config.RaisedColor = c);
+                _config.RaisedColor, RezPlsConfig.DefaultRaisedColor, c => _config.RaisedColor = c);
 
         private void DrawDoubleRaiseColorPicker()
             => DrawColorPicker("Unnecessary Raise",
                 "The highlight color for a player that you are currently raising if they are already raised or someone else is also raising them.",
-                _config.DoubleRaiseColor, c => _config.DoubleRaiseColor = c);
+                _config.DoubleRaiseColor, RezPlsConfig.DefaultDoubleRaiseColor, c => _config.DoubleRaiseColor = c);
 
         private void DrawInWorldBackgroundColorPicker()
             => DrawColorPicker("In World Background",
                 "The background color for text that is drawn into the world on corpses.",
-                _config.InWorldBackgroundColor, c => _config.InWorldBackgroundColor = c);
+                _config.InWorldBackgroundColor, RezPlsConfig.DefaultInWorldBackgroundColor, c => _config.InWorldBackgroundColor = c);
+
+        private void DrawDispellableColorPicker()
+            => DrawColorPicker("Has Dispellable Status",
+                "The highlight color for a player that has any watched dispellable status.",
+                _config.DispellableColor, RezPlsConfig.DefaultDispellableColor, c => _config.DispellableColor = c);
+
+        private void DrawCurrentlyDispelledColorPicker()
+            => DrawColorPicker("Currently Being Dispelled",
+                "The highlight color for a player that is currently being dispelled by other players or only by yourself.",
+                _config.CurrentlyDispelColor, RezPlsConfig.DefaultCurrentlyDispelColor, c => _config.CurrentlyDispelColor = c);
 
         private void DrawScaleButton()
         {
@@ -151,18 +230,6 @@ namespace RezPls.GUI
             ChangeAndSave(type, (int) _config.RectType, t => _config.RectType = (RectType) t);
         }
 
-        private void DrawResetColorsButton()
-        {
-            if (!ImGui.Button("Reset Colors to Default", new Vector2(-1, 0)))
-                return;
-
-            _config.CurrentlyRaisingColor  = RezPlsConfig.DefaultCurrentlyRaisingColor;
-            _config.RaisedColor            = RezPlsConfig.DefaultRaisedColor;
-            _config.DoubleRaiseColor       = RezPlsConfig.DefaultDoubleRaiseColor;
-            _config.InWorldBackgroundColor = RezPlsConfig.DefaultInWorldBackgroundColor;
-            _plugin.Save();
-        }
-
         public void Draw()
         {
             if (!Visible)
@@ -173,7 +240,7 @@ namespace RezPls.GUI
 
             var height = 15 * buttonHeight
               + 6 * horizontalSpacing.Y
-              + 22 * ImGui.GetStyle().ItemSpacing.Y;
+              + 27 * ImGui.GetStyle().ItemSpacing.Y;
             var width       = 450 * ImGui.GetIO().FontGlobalScale;
             var constraints = new Vector2(width, height);
             ImGui.SetNextWindowSizeConstraints(constraints, constraints);
@@ -184,25 +251,48 @@ namespace RezPls.GUI
             try
             {
                 DrawEnabledCheckbox();
-                DrawRestrictJobsCheckbox();
-                ImGui.Dummy(horizontalSpacing);
-                DrawShowGroupCheckbox();
-                DrawShowAllianceCheckbox();
-                DrawShowCasterNamesCheckbox();
-                DrawRectTypeSelector();
-                ImGui.Dummy(horizontalSpacing);
-                DrawCurrentRaiseColorPicker();
-                DrawAlreadyRaisedColorPicker();
-                DrawDoubleRaiseColorPicker();
-                ImGui.Dummy(horizontalSpacing);
-                DrawShowInWorldTextCheckbox();
-                DrawShowIconCheckbox();
-                ImGui.Dummy(horizontalSpacing);
-                DrawInWorldBackgroundColorPicker();
-                DrawScaleButton();
 
-                ImGui.Dummy(2 * horizontalSpacing);
-                DrawResetColorsButton();
+                if (ImGui.CollapsingHeader("Raise Settings"))
+                {
+                    DrawEnabledRaiseCheckbox();
+                    DrawRestrictJobsCheckbox();
+                    ImGui.Dummy(horizontalSpacing);
+                }
+
+                if (ImGui.CollapsingHeader("Dispel Settings"))
+                {
+                    DrawDispelHighlightingCheckbox();
+                    DrawRestrictJobsDispelCheckbox();
+                    ImGui.Dummy(horizontalSpacing);
+                    DrawStatusEffectList();
+                    ImGui.Dummy(horizontalSpacing);
+                }
+
+                if (ImGui.CollapsingHeader("General Settings"))
+                {
+                    DrawShowGroupCheckbox();
+                    DrawShowAllianceCheckbox();
+                    DrawShowCasterNamesCheckbox();
+                    DrawRectTypeSelector();
+                    ImGui.Dummy(horizontalSpacing);
+                    DrawShowInWorldTextCheckbox();
+                    DrawShowIconCheckbox();
+                    DrawScaleButton();
+                    ImGui.Dummy(horizontalSpacing);
+                }
+
+                if (ImGui.CollapsingHeader("Colors"))
+                {
+                    DrawCurrentRaiseColorPicker();
+                    DrawAlreadyRaisedColorPicker();
+                    DrawDoubleRaiseColorPicker();
+                    ImGui.Dummy(horizontalSpacing);
+                    DrawInWorldBackgroundColorPicker();
+                    ImGui.Dummy(horizontalSpacing);
+                    DrawDispellableColorPicker();
+                    DrawCurrentlyDispelledColorPicker();
+                    ImGui.Dummy(2 * horizontalSpacing);
+                }
             }
             finally
             {

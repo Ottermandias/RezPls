@@ -61,6 +61,9 @@
     <Reference Include="Lumina">
 			<HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\Lumina.dll</HintPath>
 		</Reference>
+    <Reference Include="Lumina.Excel">
+      <HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\Lumina.Excel.dll</HintPath>
+    </Reference>
 		<Reference Include="System" />
 		<Reference Include="System.Core" />		
 		<Reference Include="System.Numerics" />

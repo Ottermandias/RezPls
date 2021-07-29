@@ -13,26 +13,32 @@ namespace RezPls
 
         public static string Version = "";
 
-        private DalamudPluginInterface? _pluginInterface;
-        private ActorWatcher?           _actorWatcher;
-        private Overlay?                _overlay;
-        private Interface?              _interface;
-        private RezPlsConfig?          _config;
+        private DalamudPluginInterface _pluginInterface = null!;
+        private ActorWatcher           _actorWatcher    = null!;
+        private Overlay                _overlay         = null!;
+        private Interface              _interface       = null!;
+        private RezPlsConfig           _config          = null!;
+        public  StatusSet              StatusSet        = null!;
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {
             _pluginInterface = pluginInterface;
             Version          = Assembly.GetExecutingAssembly()?.GetName().Version.ToString() ?? "";
-            _config          = _pluginInterface.GetPluginConfig() as RezPlsConfig;
-            if (_config == null)
+            if (_pluginInterface.GetPluginConfig() is RezPlsConfig config)
+            {
+                _config = config;
+            }
+            else
             {
                 _config = new RezPlsConfig();
                 Save();
             }
 
-            _actorWatcher = new ActorWatcher(_pluginInterface);
+            StatusSet     = new StatusSet(_pluginInterface, _config);
+            _actorWatcher = new ActorWatcher(_pluginInterface, StatusSet);
             _overlay      = new Overlay(_pluginInterface, _actorWatcher, _config);
             _interface    = new Interface(_pluginInterface, this, _config);
+
             if (_config.Enabled)
                 Enable();
 

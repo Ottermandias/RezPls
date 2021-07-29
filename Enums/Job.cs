@@ -192,5 +192,19 @@
                 _               => false,
             };
         }
+
+        public static bool CanDispel(this Job job)
+        {
+            return job switch
+            {
+                Job.Conjurer    => true,
+                Job.WhiteMage   => true,
+                Job.Scholar     => true,
+                Job.Astrologian => true,
+                Job.Bard        => true,
+                Job.BlueMage    => true,
+                _               => false,
+            };
+        }
     }
 }

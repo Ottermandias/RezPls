@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Numerics;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using Dalamud.Data.LuminaExtensions;
 using Dalamud.Game.ClientState.Actors;
 using Dalamud.Interface;
@@ -23,7 +22,7 @@ namespace RezPls.GUI
         private readonly RezPlsConfig           _config;
         private readonly ActorWatcher           _actorWatcher;
 
-        private IReadOnlyDictionary<uint, uint> Resurrections
+        private IReadOnlyDictionary<uint, ActorState> Resurrections
             => _actorWatcher.RezList;
 
         private IReadOnlyDictionary<uint, string> Names
@@ -32,7 +31,7 @@ namespace RezPls.GUI
         private IReadOnlyDictionary<uint, Position3> Positions
             => _actorWatcher.ActorPositions;
 
-        private (uint, uint) PlayerRez
+        private (uint, ActorState) PlayerRez
             => _actorWatcher.PlayerRez;
 
         private bool _enabled = false;
@@ -56,8 +55,12 @@ namespace RezPls.GUI
         }
 
         private readonly        ImGuiScene.TextureWrap? _raiseIcon;
+        private readonly        ImGuiScene.TextureWrap? _esunaIcon;
         private static readonly Vector4                 BlackColor = new(0, 0, 0, 1);
         private static readonly Vector4                 WhiteColor = new(1, 1, 1, 1);
+
+        private bool _drawRaises  = true;
+        private bool _drawDispels = true;
 
         private static ImGuiScene.TextureWrap? BuildRaiseIcon(DalamudPluginInterface pi)
         {
@@ -78,12 +81,21 @@ namespace RezPls.GUI
             return pi.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
         }
 
+        private static ImGuiScene.TextureWrap? BuildEsunaIcon(DalamudPluginInterface pi)
+        {
+            const int esunaIconId = 884;
+
+            var texFile = pi.Data.GetIcon(esunaIconId);
+            return pi.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
+        }
+
         public Overlay(DalamudPluginInterface pluginInterface, ActorWatcher actorWatcher, RezPlsConfig config)
         {
             _pluginInterface = pluginInterface;
             _actorWatcher    = actorWatcher;
             _hudManager      = new HudManager(_pluginInterface.TargetModuleScanner);
             _raiseIcon       = BuildRaiseIcon(_pluginInterface);
+            _esunaIcon       = BuildEsunaIcon(_pluginInterface);
             _config          = config;
         }
 
@@ -92,18 +104,20 @@ namespace RezPls.GUI
             Disable();
             _hudManager.Dispose();
             _raiseIcon?.Dispose();
+            _esunaIcon?.Dispose();
         }
 
-        public void DrawInWorld(SharpDX.Vector2 pos, string text)
+        public void DrawInWorld(SharpDX.Vector2 pos, string text, ImGuiScene.TextureWrap? icon)
         {
-            if (_raiseIcon == null)
-                return;
-
             if (_config.ShowIcon)
             {
-                var scaledIconSize = new Vector2(_raiseIcon.Width, _raiseIcon.Height) * _config.IconScale * ImGui.GetIO().FontGlobalScale;
+                if (icon == null)
+                    return;
+
+                var scaledIconSize = new Vector2(icon.Width, icon.Height) * _config.IconScale * ImGui.GetIO().FontGlobalScale;
+
                 ImGui.SetCursorPos(new Vector2(pos.X - scaledIconSize.X / 2f, pos.Y - scaledIconSize.Y) - ImGui.GetMainViewport().Pos);
-                ImGui.Image(_raiseIcon.ImGuiHandle, scaledIconSize);
+                ImGui.Image(icon.ImGuiHandle, scaledIconSize);
             }
 
             if (_config.ShowInWorldText)
@@ -113,9 +127,6 @@ namespace RezPls.GUI
                 ImGui.Button(text);
             }
         }
-
-        private static unsafe string TextNodeToString(AtkTextNode* node)
-            => Marshal.PtrToStringAnsi(new IntPtr(node->NodeText.StringPtr))!;
 
         public ImDrawListPtr? BeginRezRects()
         {
@@ -238,21 +249,52 @@ namespace RezPls.GUI
         }
 
 
-        private string GetActorName(uint corpse, uint caster)
+        private string GetActorName(CastType type, uint corpse, uint caster)
         {
+            if (type == CastType.Dispel)
+                return Names.TryGetValue(caster, out var name) ? name : "Unknown";
             if (corpse == caster)
                 return "LIMIT BREAK";
             if (caster == 0)
                 return string.Empty;
 
-            return Names.TryGetValue(caster, out var name) ? name : "Unknown";
+            return Names.TryGetValue(caster, out var name2) ? name2 : "Unknown";
         }
 
         private Position3? GetActorPosition(uint corpse)
             => Positions.TryGetValue(corpse, out var pos) ? pos : null;
 
+        private uint GetColor(uint corpse, ActorState state)
+        {
+            if (state.Type == CastType.Dispel && state.Caster != 0)
+                return PlayerRez.Item1 != corpse || PlayerRez.Item1 == PlayerRez.Item2.Caster
+                    ? _config.CurrentlyDispelColor
+                    : _config.DoubleRaiseColor;
+
+            if (state.HasStatus)
+                return _config.DispellableColor;
+
+            if (state.Caster == 0)
+                return PlayerRez.Item1 != corpse ? _config.RaisedColor : _config.DoubleRaiseColor;
+            if (corpse == PlayerRez.Item1 && state.Caster != PlayerRez.Item2.Caster)
+                return _config.DoubleRaiseColor;
+
+            return _config.CurrentlyRaisingColor;
+        }
+
+        private string GetText(string name, ActorState state)
+        {
+            if (state.Caster == 0)
+                return "Already Raised";
+
+            return state.Type == CastType.Raise ? $"Raise: {name}" : $"Dispel: {name}";
+        }
+
         public unsafe void DrawOnPartyFrames(ImDrawListPtr drawPtr)
         {
+            if (!_drawRaises && !_drawDispels)
+                return;
+
             var party     = (AtkUnitBase*) _pluginInterface.Framework.Gui.GetUiObjectByName("_PartyList", 1);
             var drawParty = _config.ShowGroupFrame && party != null && party->IsVisible;
 
@@ -264,21 +306,20 @@ namespace RezPls.GUI
 
             var anyParty = drawParty || drawAlliance1 || drawAlliance2;
 
-            void DrawWhichRect(uint corpse, uint caster)
+            void DrawWhichRect(uint corpse, ActorState state)
             {
-                var name = GetActorName(corpse, caster);
+                if (!_drawRaises && state.Type == CastType.Raise && !state.HasStatus)
+                    return;
+                if (!_drawDispels && state.Type != CastType.Raise)
+                    return;
+
+                var name = GetActorName(state.Type, corpse, state.Caster);
                 if (anyParty)
                 {
                     var group = _hudManager.FindGroupMemberById(corpse);
                     if (group != null)
                     {
-                        uint color;
-                        if (caster == 0)
-                            color = PlayerRez.Item1 != corpse ? _config.RaisedColor : _config.DoubleRaiseColor;
-                        else if (corpse == PlayerRez.Item1 && caster != PlayerRez.Item2)
-                            color = _config.DoubleRaiseColor;
-                        else
-                            color = _config.CurrentlyRaisingColor;
+                        var color = GetColor(corpse, state);
 
                         switch (group.Value.groupIdx)
                         {
@@ -300,12 +341,12 @@ namespace RezPls.GUI
                     }
                 }
 
-                if (corpse == caster)
+                if (corpse == state.Caster)
                     return;
 
                 var pos = GetActorPosition(corpse);
                 if (pos != null && _pluginInterface.Framework.Gui.WorldToScreen(pos.Value, out var screenPos))
-                    DrawInWorld(screenPos, caster == 0 ? "Already Raised" : $"Raise: {name}");
+                    DrawInWorld(screenPos, GetText(name, state), state.Type == CastType.Dispel ? _esunaIcon : _raiseIcon);
             }
 
             foreach (var kvp in Resurrections)
@@ -317,12 +358,16 @@ namespace RezPls.GUI
             if (Resurrections.Count == 0)
                 return;
 
-            if (_config.RestrictedJobs)
+            _drawRaises  = true;
+            _drawDispels = true;
+            if (_config.RestrictedJobs || _config.RestrictedJobsDispel)
             {
                 var (job, level) = _actorWatcher.CurrentPlayerJob();
 
                 if (!job.CanRaise() || job == Job.RDM && level < 64)
-                    return;
+                    _drawRaises = !_config.RestrictedJobs;
+                if (!job.CanDispel() || job == Job.BRD && level < 35)
+                    _drawDispels = !_config.RestrictedJobsDispel;
             }
 
             var drawPtrOpt = BeginRezRects();

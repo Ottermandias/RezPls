@@ -8,22 +8,53 @@ using RezPls.Enums;
 
 namespace RezPls.Managers
 {
+    public enum CastType : byte
+    {
+        None,
+        Raise,
+        Dispel,
+    };
+
+    public readonly struct ActorState
+    {
+        public readonly uint     Caster;
+        public readonly CastType Type;
+        public readonly bool     HasStatus;
+
+        public ActorState(uint caster, CastType type, bool hasStatus)
+        {
+            Caster    = caster;
+            Type      = type;
+            HasStatus = hasStatus;
+        }
+
+        public ActorState SetHasStatus(bool hasStatus)
+            => new(Caster, Type, hasStatus);
+
+        public ActorState SetCasting(uint target, CastType type)
+            => new(target, type, HasStatus);
+
+        public static ActorState Nothing = new(0, CastType.None, false);
+    }
+
     public class ActorWatcher : IDisposable
     {
         private          bool                   _enabled = false;
         private readonly DalamudPluginInterface _pluginInterface;
+        private readonly StatusSet              _statusSet;
         private readonly IntPtr                 _actorTablePtr;
         private const    int                    ActorTableLength       = 424;
         private const    int                    ActorTablePlayerLength = 256;
 
-        public readonly Dictionary<uint, uint>      RezList        = new(128);
-        public readonly Dictionary<uint, string>    ActorNames     = new();
-        public readonly Dictionary<uint, Position3> ActorPositions = new();
-        public          (uint, uint)                PlayerRez      = (0, uint.MaxValue);
+        public readonly Dictionary<uint, ActorState> RezList        = new(128);
+        public readonly Dictionary<uint, string>     ActorNames     = new();
+        public readonly Dictionary<uint, Position3>  ActorPositions = new();
+        public          (uint, ActorState)           PlayerRez      = (0, ActorState.Nothing);
 
-        public ActorWatcher(DalamudPluginInterface pluginInterface)
+        public ActorWatcher(DalamudPluginInterface pluginInterface, StatusSet statusSet)
         {
             _pluginInterface                         =  pluginInterface;
+            _statusSet                               =  statusSet;
             _pluginInterface.Framework.OnUpdateEvent += OnFrameworkUpdate;
 
             _actorTablePtr = BaseAddressResolver.DebugScannedValues["ClientStateAddressResolver"]
@@ -47,7 +78,7 @@ namespace RezPls.Managers
             _pluginInterface.Framework.OnUpdateEvent -= OnFrameworkUpdate;
             _enabled                                 =  false;
             RezList.Clear();
-            PlayerRez = (0, 0);
+            PlayerRez = (0, ActorState.Nothing);
         }
 
         public void Dispose()
@@ -105,22 +136,27 @@ namespace RezPls.Managers
             };
         }
 
-        private static unsafe bool IsCastingResurrection(byte* actorPtr)
+        private static unsafe CastType GetCastType(byte* actorPtr)
         {
             return GetCurrentCast(actorPtr) switch
             {
-                173   => true, // ACN, SMN, SCH
-                125   => true, // CNH, WHM
-                3603  => true, // AST
-                18317 => true, // BLU
-                208   => true, // WHM LB3
-                4247  => true, // SCH LB3
-                4248  => true, // AST LB3
-                7523  => true, // RDM
-                22345 => true, // Lost Sacrifice, Bozja
-                20730 => true, // Lost Arise, Bozja
-                12996 => true, // Raise L, Eureka
-                _     => false,
+                173   => CastType.Raise, // ACN, SMN, SCH
+                125   => CastType.Raise, // CNH, WHM
+                3603  => CastType.Raise, // AST
+                18317 => CastType.Raise, // BLU
+                208   => CastType.Raise, // WHM LB3
+                4247  => CastType.Raise, // SCH LB3
+                4248  => CastType.Raise, // AST LB3
+                7523  => CastType.Raise, // RDM
+                22345 => CastType.Raise, // Lost Sacrifice, Bozja
+                20730 => CastType.Raise, // Lost Arise, Bozja
+                12996 => CastType.Raise, // Raise L, Eureka
+
+                7568  => CastType.Dispel, // Esuna
+                3561  => CastType.Dispel, // The Warden's Paean, instant, so irrelevant
+                18318 => CastType.Dispel, // Exuviation
+
+                _ => CastType.None,
             };
         }
 
@@ -151,7 +187,7 @@ namespace RezPls.Managers
             return *(actorPtr + jobOffset);
         }
 
-        private static unsafe bool IsRaised(byte* actorPtr)
+        private unsafe CastType HasStatus(byte* actorPtr)
         {
             const int statusEffectsOffset = 0x19F8;
             const int statusEffectSize    = 12;
@@ -162,16 +198,15 @@ namespace RezPls.Managers
             for (; start < end; start += 12)
             {
                 var id = *(ushort*) start;
-                switch (id)
-                {
-                    case 148:
-                    case 1140:
-                        return true;
-                    case 0: return false;
-                }
+
+                if (id == 148 || id == 1140)
+                    return CastType.Raise;
+
+                if (_statusSet.IsEnabled(id))
+                    return CastType.Dispel;
             }
 
-            return false;
+            return CastType.None;
         }
 
         private unsafe void IterateActors()
@@ -188,23 +223,38 @@ namespace RezPls.Managers
                 {
                     var actorId = GetActorId(actor);
                     ActorPositions[actorId] = GetActorPosition(actor);
-                    if (IsRaised(actor))
-                        RezList[actorId] = 0;
+                    if (HasStatus(actor) == CastType.Raise)
+                        RezList[actorId] = new ActorState(0, CastType.Raise, false);
                     if (!ActorNames.ContainsKey(actorId))
                         ActorNames.Add(actorId, GetActorName(actor));
                 }
-                else if (IsCastingResurrection(actor))
+                else
                 {
+                    var cast        = GetCastType(actor);
+                    var dispellable = HasStatus(actor) == CastType.Dispel;
+                    if (cast == CastType.None && !dispellable)
+                        continue;
+
                     var actorId = GetActorId(actor);
+                    if (dispellable)
+                        RezList[actorId] = RezList.TryGetValue(actorId, out var state)
+                            ? state.SetHasStatus(true)
+                            : new ActorState(0, CastType.None, true);
+
                     if (!ActorNames.ContainsKey(actorId))
                         ActorNames.Add(actorId, GetActorName(actor));
-
                     var corpseId = GetCastTarget(actor);
                     if (current == (byte**) _actorTablePtr)
-                        PlayerRez = (corpseId, actorId);
+                        PlayerRez = (corpseId, new ActorState(actorId, cast, false));
 
-                    if (!RezList.TryGetValue(corpseId, out var caster) || caster == PlayerRez.Item2)
-                        RezList[corpseId] = actorId;
+                    if (cast == CastType.Raise && (!RezList.TryGetValue(corpseId, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
+                        RezList[corpseId] = RezList.TryGetValue(corpseId, out var state)
+                            ? state.SetCasting(actorId, cast)
+                            : new ActorState(actorId, cast, false);
+                    if (cast == CastType.Dispel)
+                        RezList[corpseId] = RezList.TryGetValue(corpseId, out var state)
+                            ? state.SetCasting(actorId, cast)
+                            : new ActorState(actorId, cast, false);
                 }
             }
         }
