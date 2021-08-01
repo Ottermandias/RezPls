@@ -193,7 +193,8 @@ namespace RezPls.GUI
         private void DrawInWorldBackgroundColorPickerDispel()
             => DrawColorPicker("In World Background (Dispel)",
                 "The background color for text that is drawn into the world on characters that are afflicted by a watched status effect.",
-                _config.InWorldBackgroundColorDispel, RezPlsConfig.DefaultInWorldBackgroundColorDispel, c => _config.InWorldBackgroundColorDispel = c);
+                _config.InWorldBackgroundColorDispel, RezPlsConfig.DefaultInWorldBackgroundColorDispel,
+                c => _config.InWorldBackgroundColorDispel = c);
 
         private void DrawDispellableColorPicker()
             => DrawColorPicker("Has Dispellable Status",

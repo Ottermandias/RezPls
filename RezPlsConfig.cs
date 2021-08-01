@@ -18,8 +18,8 @@ namespace RezPls
         public const uint DefaultDoubleRaiseColor             = 0x600000FF;
         public const uint DefaultInWorldBackgroundColorRaise  = 0xC8143C0A;
         public const uint DefaultInWorldBackgroundColorDispel = 0xC8140A3C;
-        public const uint DefaultDispellableColor             = 0x60FFFFFF;
-        public const uint DefaultCurrentlyDispelColor         = 0x60A060FF;
+        public const uint DefaultDispellableColor             = 0x60FF00CA;
+        public const uint DefaultCurrentlyDispelColor         = 0x60FFFFFF;
 
 
         public int      Version                      { get; set; } = 1;
