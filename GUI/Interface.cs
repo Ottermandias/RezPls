@@ -62,19 +62,19 @@ namespace RezPls.GUI
 
         private void DrawShowGroupCheckbox()
             => DrawCheckbox("Highlight in Party Frames",
-                "Highlights players already raised or currently being raised in your party frames according to your color selection.",
+                "Highlights players in your party frames according to your color and state selection.",
                 _config.ShowGroupFrame,
                 e => _config.ShowGroupFrame = e);
 
         private void DrawShowAllianceCheckbox()
             => DrawCheckbox("Highlight in Alliance Frames",
-                "Highlights players already raised or currently being raised in your alliance frames according to your color selection.",
+                "Highlights players in your alliance frames according to your color and state selection.",
                 _config.ShowAllianceFrame,
                 e => _config.ShowAllianceFrame = e);
 
         private void DrawShowCasterNamesCheckbox()
             => DrawCheckbox("Write Caster Names",
-                "When highlighting players, also write the name of the resurrector in the frame.", _config.ShowCasterNames,
+                "When highlighting players, also write the name of a caster resurrecting or dispelling them in the frame.", _config.ShowCasterNames,
                 e => _config.ShowCasterNames = e);
 
         private void DrawShowIconCheckbox()
@@ -82,10 +82,20 @@ namespace RezPls.GUI
                 "Draw a Raised icon on corpses that are already raised or currently being raised.", _config.ShowIcon,
                 e => _config.ShowIcon = e);
 
+        private void DrawShowIconDispelCheckbox()
+            => DrawCheckbox("Draw In World Icon##Dispel",
+                "Draw a debuff icon on players that have a dispellable status effect.", _config.ShowIconDispel,
+                e => _config.ShowIconDispel = e);
+
         private void DrawShowInWorldTextCheckbox()
             => DrawCheckbox("Draw In World Text",
                 "Writes the current resurrector under a corpse currently being raised, or that he is already raised.", _config.ShowInWorldText,
                 e => _config.ShowInWorldText = e);
+
+        private void DrawShowInWorldTextDispelCheckbox()
+            => DrawCheckbox("Draw In World Text##Dispel",
+                "Writes the current caster under an afflicted player currently being dispelled, or that he is still requires a dispel.", _config.ShowInWorldTextDispel,
+                e => _config.ShowInWorldTextDispel = e);
 
         private void DrawRestrictJobsCheckbox()
             => DrawCheckbox("Restrict to resurrecting Jobs",
@@ -181,8 +191,9 @@ namespace RezPls.GUI
                 _config.RaisedColor, RezPlsConfig.DefaultRaisedColor, c => _config.RaisedColor = c);
 
         private void DrawDoubleRaiseColorPicker()
-            => DrawColorPicker("Unnecessary Raise",
-                "The highlight color for a player that you are currently raising if they are already raised or someone else is also raising them.",
+            => DrawColorPicker("Redundant Cast",
+                "The highlight color for a player that you are currently raising if they are already raised or someone else is also raising them,\n"
+              + "if you and another player dispel them, or if you dispel someone without monitored status effects.",
                 _config.DoubleRaiseColor, RezPlsConfig.DefaultDoubleRaiseColor, c => _config.DoubleRaiseColor = c);
 
         private void DrawInWorldBackgroundColorPicker()
@@ -262,6 +273,8 @@ namespace RezPls.GUI
                 {
                     DrawEnabledRaiseCheckbox();
                     DrawRestrictJobsCheckbox();
+                    DrawShowIconCheckbox();
+                    DrawShowInWorldTextCheckbox();
                     ImGui.Dummy(horizontalSpacing);
                 }
 
@@ -269,6 +282,8 @@ namespace RezPls.GUI
                 {
                     DrawDispelHighlightingCheckbox();
                     DrawRestrictJobsDispelCheckbox();
+                    DrawShowIconDispelCheckbox();
+                    DrawShowInWorldTextDispelCheckbox();
                     ImGui.Dummy(horizontalSpacing);
                     DrawStatusEffectList();
                     ImGui.Dummy(horizontalSpacing);
@@ -280,9 +295,6 @@ namespace RezPls.GUI
                     DrawShowAllianceCheckbox();
                     DrawShowCasterNamesCheckbox();
                     DrawRectTypeSelector();
-                    ImGui.Dummy(horizontalSpacing);
-                    DrawShowInWorldTextCheckbox();
-                    DrawShowIconCheckbox();
                     DrawScaleButton();
                     ImGui.Dummy(horizontalSpacing);
                 }
@@ -291,14 +303,15 @@ namespace RezPls.GUI
                 {
                     DrawCurrentRaiseColorPicker();
                     DrawAlreadyRaisedColorPicker();
+                    ImGui.Dummy(horizontalSpacing);
+                    DrawDispellableColorPicker();
+                    DrawCurrentlyDispelledColorPicker();
+                    ImGui.Dummy(horizontalSpacing);
                     DrawDoubleRaiseColorPicker();
                     ImGui.Dummy(horizontalSpacing);
                     DrawInWorldBackgroundColorPicker();
                     DrawInWorldBackgroundColorPickerDispel();
                     ImGui.Dummy(horizontalSpacing);
-                    DrawDispellableColorPicker();
-                    DrawCurrentlyDispelledColorPicker();
-                    ImGui.Dummy(2 * horizontalSpacing);
                 }
             }
             finally

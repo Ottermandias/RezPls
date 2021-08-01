@@ -22,29 +22,33 @@ namespace RezPls
         public const uint DefaultCurrentlyDispelColor         = 0x60FFFFFF;
 
 
-        public int      Version                      { get; set; } = 1;
-        public float    IconScale                    { get; set; } = 1f;
-        public uint     RaisedColor                  { get; set; } = DefaultRaisedColor;
-        public uint     CurrentlyRaisingColor        { get; set; } = DefaultCurrentlyRaisingColor;
-        public uint     DoubleRaiseColor             { get; set; } = DefaultDoubleRaiseColor;
-        public uint     InWorldBackgroundColor       { get; set; } = DefaultInWorldBackgroundColorRaise;
-        public uint     InWorldBackgroundColorDispel { get; set; } = DefaultInWorldBackgroundColorDispel;
-        public uint     DispellableColor             { get; set; } = DefaultDispellableColor;
-        public uint     CurrentlyDispelColor         { get; set; } = DefaultCurrentlyDispelColor;
-        public RectType RectType                     { get; set; } = RectType.FillAndFullAlphaOutline;
-        public bool     Enabled                      { get; set; } = true;
-        public bool     EnabledRaise                 { get; set; } = true;
-        public bool     ShowIcon                     { get; set; } = true;
-        public bool     RestrictedJobs               { get; set; } = false;
-        public bool     ShowInWorldText              { get; set; } = true;
-        public bool     ShowCasterNames              { get; set; } = true;
-        public bool     ShowAllianceFrame            { get; set; } = true;
-        public bool     ShowGroupFrame               { get; set; } = true;
+        public int      Version           { get; set; } = 1;
+        public float    IconScale         { get; set; } = 1f;
+        public bool     Enabled           { get; set; } = true;
+        public RectType RectType          { get; set; } = RectType.FillAndFullAlphaOutline;
+        public bool     ShowCasterNames   { get; set; } = true;
+        public bool     ShowAllianceFrame { get; set; } = true;
+        public bool     ShowGroupFrame    { get; set; } = true;
+
+        public bool EnabledRaise           { get; set; } = true;
+        public bool RestrictedJobs         { get; set; } = false;
+        public uint RaisedColor            { get; set; } = DefaultRaisedColor;
+        public uint CurrentlyRaisingColor  { get; set; } = DefaultCurrentlyRaisingColor;
+        public uint InWorldBackgroundColor { get; set; } = DefaultInWorldBackgroundColorRaise;
+        public bool ShowIcon               { get; set; } = true;
+        public bool ShowInWorldText        { get; set; } = true;
+        public uint DoubleRaiseColor       { get; set; } = DefaultDoubleRaiseColor;
 
 
-        public bool            EnabledDispel        { get; set; } = true;
-        public bool            InvertStatusSet      { get; set; } = false;
-        public bool            RestrictedJobsDispel { get; set; } = false;
-        public HashSet<ushort> ChosenStatuses       { get; set; } = new();
+        public bool            EnabledDispel                { get; set; } = true;
+        public bool            RestrictedJobsDispel         { get; set; } = false;
+        public uint            DispellableColor             { get; set; } = DefaultDispellableColor;
+        public uint            CurrentlyDispelColor         { get; set; } = DefaultCurrentlyDispelColor;
+        public uint            InWorldBackgroundColorDispel { get; set; } = DefaultInWorldBackgroundColorDispel;
+        public bool            InvertStatusSet              { get; set; } = false;
+        public bool            ShowIconDispel               { get; set; } = true;
+        public bool            ShowInWorldTextDispel        { get; set; } = true;
+        public HashSet<ushort> ChosenStatuses               { get; set; } = new();
+
     }
 }

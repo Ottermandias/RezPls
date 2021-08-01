@@ -124,25 +124,25 @@ namespace RezPls.GUI
             _dispelIcon?.Dispose();
         }
 
-        private (CastType, string) GetText(string name, ActorState state)
+        private (CastType, string, bool, bool) GetText(string name, ActorState state)
         {
             if (state.Caster == 0)
             {
                 if (state.HasStatus)
-                    return _drawDispels ? (CastType.Dispel, "Needs Dispel") : (CastType.None, "");
-                return _drawRaises ? (CastType.Raise, "Already Raised") : (CastType.None, "");
+                    return _drawDispels ? (CastType.Dispel, "Needs Dispel", _config.ShowIcon, _config.ShowInWorldText) : (CastType.None, "", false, false);
+                return _drawRaises ? (CastType.Raise, "Already Raised", _config.ShowIcon, _config.ShowInWorldText) : (CastType.None, "", false, false);
             }
 
-            return state.Type == CastType.Raise && _drawRaises ? (CastType.Raise, $"Raise: {name}") : (CastType.None, "");
+            return state.Type == CastType.Raise && _drawRaises ? (CastType.Raise, $"Raise: {name}", _config.ShowIcon, _config.ShowInWorldText) : (CastType.None, "", false, false);
         }
 
         public void DrawInWorld(SharpDX.Vector2 pos, string name, ActorState state)
         {
-            var (type, text) = GetText(name, state);
+            var (type, text, drawIcon, drawText) = GetText(name, state);
             if (type == CastType.None)
                 return;
 
-            if (_config.ShowIcon)
+            if (drawIcon)
             {
                 var icon = type == CastType.Dispel ? _dispelIcon : _raiseIcon;
                 if (icon == null)
@@ -154,7 +154,7 @@ namespace RezPls.GUI
                 ImGui.Image(icon.ImGuiHandle, scaledIconSize);
             }
 
-            if (_config.ShowInWorldText)
+            if (drawText)
             {
                 var color    = type == CastType.Dispel ? _config.InWorldBackgroundColorDispel : _config.InWorldBackgroundColor;
                 var textSize = ImGui.CalcTextSize(text);
