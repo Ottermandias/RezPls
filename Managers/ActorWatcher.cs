@@ -237,9 +237,12 @@ namespace RezPls.Managers
 
                     var actorId = GetActorId(actor);
                     if (dispellable)
+                    {
                         RezList[actorId] = RezList.TryGetValue(actorId, out var state)
                             ? state.SetHasStatus(true)
                             : new ActorState(0, CastType.None, true);
+                        ActorPositions[actorId] = GetActorPosition(actor);
+                    }
 
                     if (!ActorNames.ContainsKey(actorId))
                         ActorNames.Add(actorId, GetActorName(actor));

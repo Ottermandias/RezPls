@@ -187,8 +187,13 @@ namespace RezPls.GUI
 
         private void DrawInWorldBackgroundColorPicker()
             => DrawColorPicker("In World Background",
-                "The background color for text that is drawn into the world on corpses.",
-                _config.InWorldBackgroundColor, RezPlsConfig.DefaultInWorldBackgroundColor, c => _config.InWorldBackgroundColor = c);
+                "The background color for text that is drawn into the world on corpses for raises.",
+                _config.InWorldBackgroundColor, RezPlsConfig.DefaultInWorldBackgroundColorRaise, c => _config.InWorldBackgroundColor = c);
+
+        private void DrawInWorldBackgroundColorPickerDispel()
+            => DrawColorPicker("In World Background (Dispel)",
+                "The background color for text that is drawn into the world on characters that are afflicted by a watched status effect.",
+                _config.InWorldBackgroundColorDispel, RezPlsConfig.DefaultInWorldBackgroundColorDispel, c => _config.InWorldBackgroundColorDispel = c);
 
         private void DrawDispellableColorPicker()
             => DrawColorPicker("Has Dispellable Status",
@@ -288,6 +293,7 @@ namespace RezPls.GUI
                     DrawDoubleRaiseColorPicker();
                     ImGui.Dummy(horizontalSpacing);
                     DrawInWorldBackgroundColorPicker();
+                    DrawInWorldBackgroundColorPickerDispel();
                     ImGui.Dummy(horizontalSpacing);
                     DrawDispellableColorPicker();
                     DrawCurrentlyDispelledColorPicker();
