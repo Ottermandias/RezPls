@@ -129,11 +129,19 @@ namespace RezPls.GUI
             if (state.Caster == 0)
             {
                 if (state.HasStatus)
-                    return _drawDispels ? (CastType.Dispel, "Needs Dispel", _config.ShowIcon, _config.ShowInWorldText) : (CastType.None, "", false, false);
+                    return _drawDispels ? (CastType.Dispel, "Needs Cleanse", _config.ShowIconDispel, _config.ShowInWorldTextDispel) : (CastType.None, "", false, false);
                 return _drawRaises ? (CastType.Raise, "Already Raised", _config.ShowIcon, _config.ShowInWorldText) : (CastType.None, "", false, false);
             }
 
-            return state.Type == CastType.Raise && _drawRaises ? (CastType.Raise, $"Raise: {name}", _config.ShowIcon, _config.ShowInWorldText) : (CastType.None, "", false, false);
+            if (state.Type == CastType.Raise)
+                return _drawRaises
+                    ? (CastType.Raise, $"Raise: {name}", _config.ShowIcon, _config.ShowInWorldText)
+                    : (CastType.None, "", false, false);
+
+            return _drawDispels
+                ? (CastType.Raise, $"Cleanse: {name}", _config.ShowIconDispel, _config.ShowInWorldTextDispel)
+                : (CastType.None, "", false, false);
+
         }
 
         public void DrawInWorld(SharpDX.Vector2 pos, string name, ActorState state)

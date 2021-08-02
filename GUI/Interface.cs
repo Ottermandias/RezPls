@@ -74,7 +74,7 @@ namespace RezPls.GUI
 
         private void DrawShowCasterNamesCheckbox()
             => DrawCheckbox("Write Caster Names",
-                "When highlighting players, also write the name of a caster resurrecting or dispelling them in the frame.", _config.ShowCasterNames,
+                "When highlighting players, also write the name of a caster resurrecting or cleansing them in the frame.", _config.ShowCasterNames,
                 e => _config.ShowCasterNames = e);
 
         private void DrawShowIconCheckbox()
@@ -84,7 +84,7 @@ namespace RezPls.GUI
 
         private void DrawShowIconDispelCheckbox()
             => DrawCheckbox("Draw In World Icon##Dispel",
-                "Draw a debuff icon on players that have a dispellable status effect.", _config.ShowIconDispel,
+                "Draw a debuff icon on players that have a removable detrimental status effect.", _config.ShowIconDispel,
                 e => _config.ShowIconDispel = e);
 
         private void DrawShowInWorldTextCheckbox()
@@ -94,7 +94,7 @@ namespace RezPls.GUI
 
         private void DrawShowInWorldTextDispelCheckbox()
             => DrawCheckbox("Draw In World Text##Dispel",
-                "Writes the current caster under an afflicted player currently being dispelled, or that he is still requires a dispel.", _config.ShowInWorldTextDispel,
+                "Writes the current caster under an afflicted player currently being cleansed, or that he has a removable detrimental status effect.", _config.ShowInWorldTextDispel,
                 e => _config.ShowInWorldTextDispel = e);
 
         private void DrawRestrictJobsCheckbox()
@@ -105,13 +105,13 @@ namespace RezPls.GUI
                 e => _config.RestrictedJobs = e);
 
         private void DrawDispelHighlightingCheckbox()
-            => DrawCheckbox("Enable Dispel Highlighting",
-                "Highlight players with dispellable status effects.",
+            => DrawCheckbox("Enable Cleanse Highlighting",
+                "Highlight players with removable detrimental status effects.",
                 _config.EnabledDispel, e => _config.EnabledDispel = e);
 
         private void DrawRestrictJobsDispelCheckbox()
-            => DrawCheckbox("Restrict to dispelling Jobs",
-                "Only displays the dispelling information when you are a job with inherent dispel capabilities.\n"
+            => DrawCheckbox("Restrict to cleansing Jobs",
+                "Only displays the cleansing information when you are a job with inherent cleanse capabilities.\n"
               + "CNJ, WHM, SCH, AST, BRD (at 35+), BLU",
                 _config.RestrictedJobsDispel, e => _config.RestrictedJobsDispel = e);
 
@@ -120,12 +120,12 @@ namespace RezPls.GUI
             if (ImGui.RadioButton("Ignored Statuses", !_config.InvertStatusSet))
                 ChangeAndSave(false, _config.InvertStatusSet, e => _config.InvertStatusSet = e);
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Highlight all dispellable status effects except for those in the list below.");
+                ImGui.SetTooltip("Highlight all removable detrimental status effects except for those in the list below.");
             ImGui.SameLine();
             if (ImGui.RadioButton("Monitored Statuses", _config.InvertStatusSet))
                 ChangeAndSave(true, _config.InvertStatusSet, e => _config.InvertStatusSet = e);
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Highlight only those dispellable status effects that are in the list below.");
+                ImGui.SetTooltip("Highlight only those removable detrimental status effects that are in the list below.");
             if (ImGui.BeginCombo("##StatusListSelector", "Add Status..."))
             {
                 for (var i = 0; i < _plugin.StatusSet.RestStatusSet.Count; ++i)
@@ -193,7 +193,7 @@ namespace RezPls.GUI
         private void DrawDoubleRaiseColorPicker()
             => DrawColorPicker("Redundant Cast",
                 "The highlight color for a player that you are currently raising if they are already raised or someone else is also raising them,\n"
-              + "if you and another player dispel them, or if you dispel someone without monitored status effects.",
+              + "if you and another player cleanse them, or if you cleanse someone without monitored detrimental status effects.",
                 _config.DoubleRaiseColor, RezPlsConfig.DefaultDoubleRaiseColor, c => _config.DoubleRaiseColor = c);
 
         private void DrawInWorldBackgroundColorPicker()
@@ -202,19 +202,19 @@ namespace RezPls.GUI
                 _config.InWorldBackgroundColor, RezPlsConfig.DefaultInWorldBackgroundColorRaise, c => _config.InWorldBackgroundColor = c);
 
         private void DrawInWorldBackgroundColorPickerDispel()
-            => DrawColorPicker("In World Background (Dispel)",
-                "The background color for text that is drawn into the world on characters that are afflicted by a watched status effect.",
+            => DrawColorPicker("In World Background (Cleanse)",
+                "The background color for text that is drawn into the world on characters that are afflicted by a watched detrimental status effect.",
                 _config.InWorldBackgroundColorDispel, RezPlsConfig.DefaultInWorldBackgroundColorDispel,
                 c => _config.InWorldBackgroundColorDispel = c);
 
         private void DrawDispellableColorPicker()
-            => DrawColorPicker("Has Dispellable Status",
-                "The highlight color for a player that has any watched dispellable status.",
+            => DrawColorPicker("Has Monitored Status Effect",
+                "The highlight color for a player that has any monitored detrimental status effect.",
                 _config.DispellableColor, RezPlsConfig.DefaultDispellableColor, c => _config.DispellableColor = c);
 
         private void DrawCurrentlyDispelledColorPicker()
-            => DrawColorPicker("Currently Being Dispelled",
-                "The highlight color for a player that is currently being dispelled by other players or only by yourself.",
+            => DrawColorPicker("Currently Being Cleansed",
+                "The highlight color for a player that is currently being cleansed by other players or only by yourself.",
                 _config.CurrentlyDispelColor, RezPlsConfig.DefaultCurrentlyDispelColor, c => _config.CurrentlyDispelColor = c);
 
         private void DrawScaleButton()
@@ -278,7 +278,7 @@ namespace RezPls.GUI
                     ImGui.Dummy(horizontalSpacing);
                 }
 
-                if (ImGui.CollapsingHeader("Dispel Settings"))
+                if (ImGui.CollapsingHeader("Cleanse Settings"))
                 {
                     DrawDispelHighlightingCheckbox();
                     DrawRestrictJobsDispelCheckbox();
