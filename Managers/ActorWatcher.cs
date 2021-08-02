@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Actors;
 using Dalamud.Game.Internal;
 using Dalamud.Plugin;
+using Lumina.Excel;
+using Lumina.Excel.GeneratedSheets;
 using RezPls.Enums;
 
 namespace RezPls.Managers
@@ -39,12 +41,14 @@ namespace RezPls.Managers
 
     public class ActorWatcher : IDisposable
     {
-        private          bool                   _enabled = false;
-        private readonly DalamudPluginInterface _pluginInterface;
-        private readonly StatusSet              _statusSet;
-        private readonly IntPtr                 _actorTablePtr;
-        private const    int                    ActorTableLength       = 424;
-        private const    int                    ActorTablePlayerLength = 256;
+        private          bool                      _outsidePvP = true;
+        private          bool                      _enabled    = false;
+        private readonly DalamudPluginInterface    _pluginInterface;
+        private readonly StatusSet                 _statusSet;
+        private readonly IntPtr                    _actorTablePtr;
+        private const    int                       ActorTableLength       = 424;
+        private const    int                       ActorTablePlayerLength = 256;
+        private readonly ExcelSheet<TerritoryType> _territories;
 
         public readonly Dictionary<uint, ActorState> RezList        = new(128);
         public readonly Dictionary<uint, string>     ActorNames     = new();
@@ -53,9 +57,11 @@ namespace RezPls.Managers
 
         public ActorWatcher(DalamudPluginInterface pluginInterface, StatusSet statusSet)
         {
-            _pluginInterface                         =  pluginInterface;
-            _statusSet                               =  statusSet;
-            _pluginInterface.Framework.OnUpdateEvent += OnFrameworkUpdate;
+            _pluginInterface = pluginInterface;
+            _statusSet       = statusSet;
+            _territories     = _pluginInterface.Data.GetExcelSheet<TerritoryType>();
+
+            CheckPvP(null!, _pluginInterface.ClientState.TerritoryType);
 
             _actorTablePtr = BaseAddressResolver.DebugScannedValues["ClientStateAddressResolver"]
                 .Find(kvp => kvp.Item1 == "ActorTable").Item2;
@@ -66,8 +72,9 @@ namespace RezPls.Managers
             if (_enabled)
                 return;
 
-            _pluginInterface.Framework.OnUpdateEvent += OnFrameworkUpdate;
-            _enabled                                 =  true;
+            _pluginInterface.Framework.OnUpdateEvent      += OnFrameworkUpdate;
+            _pluginInterface.ClientState.TerritoryChanged += CheckPvP;
+            _enabled                                      =  true;
         }
 
         public void Disable()
@@ -75,14 +82,21 @@ namespace RezPls.Managers
             if (!_enabled)
                 return;
 
-            _pluginInterface.Framework.OnUpdateEvent -= OnFrameworkUpdate;
-            _enabled                                 =  false;
+            _pluginInterface.Framework.OnUpdateEvent      -= OnFrameworkUpdate;
+            _pluginInterface.ClientState.TerritoryChanged -= CheckPvP;
+            _enabled                                      =  false;
             RezList.Clear();
             PlayerRez = (0, ActorState.Nothing);
         }
 
         public void Dispose()
             => Disable();
+
+        private void CheckPvP(object _, ushort territoryId)
+        {
+            var row = _territories.GetRow(territoryId);
+            _outsidePvP = !(row?.IsPvpZone ?? false);
+        }
 
         public unsafe (Job job, byte level) CurrentPlayerJob()
         {
@@ -264,9 +278,12 @@ namespace RezPls.Managers
 
         public void OnFrameworkUpdate(object _)
         {
-            RezList.Clear();
-            PlayerRez = (0, PlayerRez.Item2);
-            IterateActors();
+            if (_outsidePvP)
+            {
+                RezList.Clear();
+                PlayerRez = (0, PlayerRez.Item2);
+                IterateActors();
+            }
         }
     }
 }

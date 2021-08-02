@@ -41,6 +41,8 @@ namespace RezPls
 
             if (_config.Enabled)
                 Enable();
+            else
+                Disable();
 
             _pluginInterface.CommandManager.AddHandler("/rezpls", new CommandInfo(OnRezPls)
             {
