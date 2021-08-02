@@ -3,7 +3,7 @@
   "Name": "RezPls",
   "Description": "Easy overview about who is currently resurrecting who, who is already resurrected, and who has removable detrimental status effects.",
   "InternalName": "RezPls",
-  "AssemblyVersion": "1.1.1.1",
+  "AssemblyVersion": "1.1.1.2",
   "RepoUrl": "https://github.com/Ottermandias/RezPls",
   "ApplicableVersion": "any",
   "DalamudApiLevel": 3
