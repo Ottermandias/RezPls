@@ -46,10 +46,9 @@ namespace RezPls
         public uint            DispellableColor             { get; set; } = DefaultDispellableColor;
         public uint            CurrentlyDispelColor         { get; set; } = DefaultCurrentlyDispelColor;
         public uint            InWorldBackgroundColorDispel { get; set; } = DefaultInWorldBackgroundColorDispel;
-        public bool            InvertStatusSet              { get; set; } = false;
         public bool            ShowIconDispel               { get; set; } = true;
         public bool            ShowInWorldTextDispel        { get; set; } = true;
-        public HashSet<ushort> ChosenStatuses               { get; set; } = new();
+        public HashSet<ushort> UnmonitoredStatuses          { get; set; } = new();
 
     }
 }

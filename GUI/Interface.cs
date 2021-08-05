@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Plugin;
 using ImGuiNET;
+using Lumina.Excel.GeneratedSheets;
 
 namespace RezPls.GUI
 {
@@ -13,6 +16,9 @@ namespace RezPls.GUI
         private readonly DalamudPluginInterface _pi;
         private readonly RezPls                 _plugin;
         private readonly RezPlsConfig           _config;
+
+        private string          _statusFilter = string.Empty;
+        private HashSet<string> _seenNames;
 
         public bool Visible = false;
 
@@ -31,6 +37,7 @@ namespace RezPls.GUI
             _plugin       = plugin;
             _config       = config;
             _configHeader = RezPls.Version.Length > 0 ? $"{PluginName} v{RezPls.Version}###{PluginName}" : PluginName;
+            _seenNames    = new HashSet<string>(_plugin.StatusSet.DisabledStatusSet.Count + _plugin.StatusSet.EnabledStatusSet.Count);
 
             _pi.UiBuilder.OnBuildUi      += Draw;
             _pi.UiBuilder.OnOpenConfigUi += Enable;
@@ -121,37 +128,21 @@ namespace RezPls.GUI
               + "CNJ, WHM, SCH, AST, BRD (at 35+), BLU",
                 _config.RestrictedJobsDispel, e => _config.RestrictedJobsDispel = e);
 
-        private void DrawStatusEffectList()
+
+        private void DrawSingleStatusEffectList(string header, bool which, float width)
         {
-            if (ImGui.RadioButton("Ignored Statuses", !_config.InvertStatusSet))
-                ChangeAndSave(false, _config.InvertStatusSet, e => _config.InvertStatusSet = e);
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Highlight all removable detrimental status effects except for those in the list below.");
-            ImGui.SameLine();
-            if (ImGui.RadioButton("Monitored Statuses", _config.InvertStatusSet))
-                ChangeAndSave(true, _config.InvertStatusSet, e => _config.InvertStatusSet = e);
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Highlight only those removable detrimental status effects that are in the list below.");
-            if (ImGui.BeginCombo("##StatusListSelector", "Add Status..."))
+            using var group = ImGuiRaii.NewGroup();
+            var       list  = which ? _plugin.StatusSet.DisabledStatusSet : _plugin.StatusSet.EnabledStatusSet;
+            _seenNames.Clear();
+            if (ImGui.BeginListBox($"##{header}box", width / 2 * Vector2.UnitX))
             {
-                for (var i = 0; i < _plugin.StatusSet.RestStatusSet.Count; ++i)
+                for (var i = 0; i < list.Count; ++i)
                 {
-                    var status = _plugin.StatusSet.RestStatusSet[i];
-                    if (ImGui.Selectable($"{status.Name}##status{status.RowId}"))
-                    {
-                        _plugin.StatusSet.Swap((ushort) status.RowId);
-                        --i;
-                    }
-                }
+                    var (status, name) = list[i];
+                    if (!name.Contains(_statusFilter) || _seenNames.Contains(name))
+                        continue;
 
-                ImGui.EndCombo();
-            }
-
-            if (ImGui.BeginListBox("##StatusList"))
-            {
-                for (var i = 0; i < _plugin.StatusSet.ListStatusSet.Count; ++i)
-                {
-                    var status = _plugin.StatusSet.ListStatusSet[i];
+                    _seenNames.Add(name);
                     if (ImGui.Selectable($"{status.Name}##status{status.RowId}"))
                     {
                         _plugin.StatusSet.Swap((ushort) status.RowId);
@@ -162,8 +153,40 @@ namespace RezPls.GUI
                 ImGui.EndListBox();
             }
 
-            if (ImGui.Button("Clear list.", ImGui.GetItemRectSize().X * Vector2.UnitX))
-                _plugin.StatusSet.ClearList();
+            if (which)
+            {
+                if (ImGui.Button("Disable All Statuses", width / 2 * Vector2.UnitX))
+                    _plugin.StatusSet.ClearEnabledList();
+            }
+            else if (ImGui.Button("Enable All Statuses", width / 2 * Vector2.UnitX))
+            {
+                _plugin.StatusSet.ClearDisabledList();
+            }
+        }
+
+        private static void DrawStatusSelectorTitles(float width)
+        {
+            const string disabledHeader = "Disabled Statuses";
+            const string enabledHeader  = "Monitored Statuses";
+            var          pos1           = width / 4 - ImGui.CalcTextSize(disabledHeader).X / 2;
+            var          pos2           = 3 * width / 4 + ImGui.GetStyle().ItemSpacing.X - ImGui.CalcTextSize(enabledHeader).X / 2;
+            ImGui.SetCursorPosX(pos1);
+            ImGui.AlignTextToFramePadding();
+            ImGui.Text(disabledHeader);
+            ImGui.SameLine(pos2);
+            ImGui.AlignTextToFramePadding();
+            ImGui.Text(enabledHeader);
+        }
+
+        private void DrawStatusEffectList()
+        {
+            var width = ImGui.GetWindowContentRegionWidth() - ImGui.GetStyle().ItemSpacing.X;
+            DrawStatusSelectorTitles(width);
+            ImGui.SetNextItemWidth(width);
+            ImGui.InputTextWithHint("##statusFilter", "Filter...", ref _statusFilter, 64);
+            DrawSingleStatusEffectList("Disabled Statuses", true, width);
+            ImGui.SameLine();
+            DrawSingleStatusEffectList("Monitored Statuses", false, width);
         }
 
 
