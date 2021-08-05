@@ -56,6 +56,10 @@ namespace RezPls.GUI
                     _plugin.Disable();
             });
 
+        private void DrawHideSymbolsOnSelfCheckbox()
+            => DrawCheckbox("Hide Symbols on Self", "Hide the symbol and/or text drawn into the world on the player character.",
+                _config.HideSymbolsOnSelf,          e => _config.HideSymbolsOnSelf = e);
+
         private void DrawEnabledRaiseCheckbox()
             => DrawCheckbox("Enable Raise Highlighting",
                 "Highlight players being raised.", _config.EnabledRaise, e => _config.EnabledRaise = e);
@@ -74,7 +78,8 @@ namespace RezPls.GUI
 
         private void DrawShowCasterNamesCheckbox()
             => DrawCheckbox("Write Caster Names",
-                "When highlighting players, also write the name of a caster resurrecting or cleansing them in the frame.", _config.ShowCasterNames,
+                "When highlighting players, also write the name of a caster resurrecting or cleansing them in the frame.",
+                _config.ShowCasterNames,
                 e => _config.ShowCasterNames = e);
 
         private void DrawShowIconCheckbox()
@@ -94,7 +99,8 @@ namespace RezPls.GUI
 
         private void DrawShowInWorldTextDispelCheckbox()
             => DrawCheckbox("Draw In World Text##Dispel",
-                "Writes the current caster under an afflicted player currently being cleansed, or that he has a removable detrimental status effect.", _config.ShowInWorldTextDispel,
+                "Writes the current caster under an afflicted player currently being cleansed, or that he has a removable detrimental status effect.",
+                _config.ShowInWorldTextDispel,
                 e => _config.ShowInWorldTextDispel = e);
 
         private void DrawRestrictJobsCheckbox()
@@ -291,6 +297,7 @@ namespace RezPls.GUI
 
                 if (ImGui.CollapsingHeader("General Settings"))
                 {
+                    DrawHideSymbolsOnSelfCheckbox();
                     DrawShowGroupCheckbox();
                     DrawShowAllianceCheckbox();
                     DrawShowCasterNamesCheckbox();

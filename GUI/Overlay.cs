@@ -402,6 +402,9 @@ namespace RezPls.GUI
                 if (corpse == state.Caster)
                     return;
 
+                if (_config.HideSymbolsOnSelf && corpse == PlayerRez.Item2.Caster)
+                    return;
+
                 var pos = GetActorPosition(corpse);
                 if (pos != null && _pluginInterface.Framework.Gui.WorldToScreen(pos.Value, out var screenPos))
                 {
