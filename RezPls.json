@@ -1,10 +1,26 @@
 ﻿{
+  "Disabled": false,
+  "Testing": false,
+  "InstalledFromUrl": null,
   "Author": "Ottermandias",
   "Name": "RezPls",
-  "Description": "Easy overview about who is currently resurrecting who, who is already resurrected, and who has removable detrimental status effects.",
+  "Punchline": "Easy overview about who is currently resurrecting who, who is already resurrected, and who has removable detrimental status effects.",
+  "Description": "",
+  "Tags": null,
+  "IsHide": false,
   "InternalName": "RezPls",
   "AssemblyVersion": "1.2.0.0",
+  "TestingAssemblyVersion": null,
+  "IsTestingExclusive": false,
   "RepoUrl": "https://github.com/Ottermandias/RezPls",
   "ApplicableVersion": "any",
-  "DalamudApiLevel": 4
+  "DalamudApiLevel": 4,
+  "DownloadCount": 0,
+  "LastUpdate": 0,
+  "DownloadLinkInstall": null,
+  "DownloadLinkUpdate": null,
+  "DownloadLinkTesting": null,
+  "LoadPriority": 0,
+  "ImageUrls": [],
+  "IconUrl": "https://github.com/Ottermandias/RezPls/raw/api4/Icon.png"
 }
