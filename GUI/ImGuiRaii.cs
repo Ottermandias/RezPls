@@ -51,6 +51,7 @@ namespace RezPls.GUI
                 ImGui.PopStyleColor(actualN);
                 _colorStack -= actualN;
             }
+
             return this;
         }
 
@@ -76,6 +77,7 @@ namespace RezPls.GUI
                 ImGui.PopStyleVar(actualN);
                 _styleStack -= actualN;
             }
+
             return this;
         }
 
@@ -95,6 +97,7 @@ namespace RezPls.GUI
                 ImGui.PopFont();
                 --_fontStack;
             }
+
             return this;
         }
 
@@ -105,6 +108,7 @@ namespace RezPls.GUI
                 ImGui.Indent(width);
                 _indentation += width;
             }
+
             return this;
         }
 
@@ -134,7 +138,7 @@ namespace RezPls.GUI
         public void End(int n = 1)
         {
             var actualN = Math.Min(n, _onDispose?.Count ?? 0);
-            while(actualN-- > 0)
+            while (actualN-- > 0)
                 _onDispose!.Pop()();
         }
 

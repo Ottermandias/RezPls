@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.InteropServices;
-using Dalamud.Game.ClientState.Actors;
-using Dalamud.Game.Internal;
-using Dalamud.Plugin;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
 using RezPls.Enums;
@@ -42,29 +41,25 @@ namespace RezPls.Managers
     public class ActorWatcher : IDisposable
     {
         private          bool                      _outsidePvP = true;
-        private          bool                      _enabled    = false;
-        private readonly DalamudPluginInterface    _pluginInterface;
+        private          bool                      _enabled;
         private readonly StatusSet                 _statusSet;
         private readonly IntPtr                    _actorTablePtr;
-        private const    int                       ActorTableLength       = 424;
-        private const    int                       ActorTablePlayerLength = 256;
+        private const    int                       ActorTablePlayerLength = 200;
         private readonly ExcelSheet<TerritoryType> _territories;
 
         public readonly Dictionary<uint, ActorState> RezList        = new(128);
         public readonly Dictionary<uint, string>     ActorNames     = new();
-        public readonly Dictionary<uint, Position3>  ActorPositions = new();
+        public readonly Dictionary<uint, Vector3>    ActorPositions = new();
         public          (uint, ActorState)           PlayerRez      = (0, ActorState.Nothing);
 
-        public ActorWatcher(DalamudPluginInterface pluginInterface, StatusSet statusSet)
+        public ActorWatcher(StatusSet statusSet)
         {
-            _pluginInterface = pluginInterface;
-            _statusSet       = statusSet;
-            _territories     = _pluginInterface.Data.GetExcelSheet<TerritoryType>();
+            _statusSet   = statusSet;
+            _territories = RezPls.GameData.GetExcelSheet<TerritoryType>()!;
 
-            CheckPvP(null!, _pluginInterface.ClientState.TerritoryType);
+            CheckPvP(null!, RezPls.ClientState.TerritoryType);
 
-            _actorTablePtr = BaseAddressResolver.DebugScannedValues["ClientStateAddressResolver"]
-                .Find(kvp => kvp.Item1 == "ActorTable").Item2;
+            _actorTablePtr = RezPls.Objects.Address;
         }
 
         public void Enable()
@@ -72,9 +67,9 @@ namespace RezPls.Managers
             if (_enabled)
                 return;
 
-            _pluginInterface.Framework.OnUpdateEvent      += OnFrameworkUpdate;
-            _pluginInterface.ClientState.TerritoryChanged += CheckPvP;
-            _enabled                                      =  true;
+            RezPls.Framework.Update             += OnFrameworkUpdate;
+            RezPls.ClientState.TerritoryChanged += CheckPvP;
+            _enabled                            =  true;
         }
 
         public void Disable()
@@ -82,9 +77,9 @@ namespace RezPls.Managers
             if (!_enabled)
                 return;
 
-            _pluginInterface.Framework.OnUpdateEvent      -= OnFrameworkUpdate;
-            _pluginInterface.ClientState.TerritoryChanged -= CheckPvP;
-            _enabled                                      =  false;
+            RezPls.Framework.Update             -= OnFrameworkUpdate;
+            RezPls.ClientState.TerritoryChanged -= CheckPvP;
+            _enabled                            =  false;
             RezList.Clear();
             PlayerRez = (0, ActorState.Nothing);
         }
@@ -92,7 +87,7 @@ namespace RezPls.Managers
         public void Dispose()
             => Disable();
 
-        private void CheckPvP(object _, ushort territoryId)
+        private void CheckPvP(object? _, ushort territoryId)
         {
             var row = _territories.GetRow(territoryId);
             _outsidePvP = !(row?.IsPvpZone ?? false);
@@ -139,10 +134,10 @@ namespace RezPls.Managers
             return Marshal.PtrToStringAnsi(new IntPtr(actorPtr) + actorNameOffset, actorNameLength).TrimEnd('\0');
         }
 
-        private static unsafe Position3 GetActorPosition(byte* actorPtr)
+        private static unsafe Vector3 GetActorPosition(byte* actorPtr)
         {
             const int actorPositionOffset = 0xA0;
-            return new Position3
+            return new Vector3
             {
                 X = *(float*) (actorPtr + actorPositionOffset),
                 Y = *(float*) (actorPtr + actorPositionOffset + 8),
@@ -278,12 +273,12 @@ namespace RezPls.Managers
 
         public void OnFrameworkUpdate(object _)
         {
-            if (_outsidePvP)
-            {
-                RezList.Clear();
-                PlayerRez = (0, PlayerRez.Item2);
-                IterateActors();
-            }
+            if (!_outsidePvP)
+                return;
+
+            RezList.Clear();
+            PlayerRez = (0, PlayerRez.Item2);
+            IterateActors();
         }
     }
 }

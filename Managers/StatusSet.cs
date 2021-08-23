@@ -1,14 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Dalamud.Plugin;
+using Dalamud.Logging;
 using Lumina.Excel.GeneratedSheets;
 
 namespace RezPls.Managers
 {
     public class StatusSet
     {
-        private readonly DalamudPluginInterface               _pi;
-        private readonly RezPlsConfig                         _config;
         private readonly SortedList<ushort, (Status, string)> _enabledStatusSet;
         private readonly SortedList<ushort, (Status, string)> _disabledStatusSet;
 
@@ -21,17 +19,15 @@ namespace RezPls.Managers
         public bool IsEnabled(ushort statusId)
             => _enabledStatusSet.ContainsKey(statusId);
 
-        public StatusSet(DalamudPluginInterface pi, RezPlsConfig config)
+        public StatusSet()
         {
-            _pi     = pi;
-            _config = config;
-            var sheet = pi.Data.GetExcelSheet<Status>();
-            _enabledStatusSet = new SortedList<ushort, (Status, string)>(sheet.Where(s => s.CanDispel && s.Name.RawData.Length > 0)
+            var sheet = RezPls.GameData.GetExcelSheet<Status>();
+            _enabledStatusSet = new SortedList<ushort, (Status, string)>(sheet!.Where(s => s.CanDispel && s.Name.RawData.Length > 0)
                 .ToDictionary(s => (ushort) s.RowId, s => (s, s.Name.ToString().ToLowerInvariant())));
             _disabledStatusSet = new SortedList<ushort, (Status, string)>(_enabledStatusSet.Count);
 
             var bad = false;
-            foreach (var statusId in _config.UnmonitoredStatuses)
+            foreach (var statusId in RezPls.Config.UnmonitoredStatuses)
             {
                 if (_enabledStatusSet.TryGetValue(statusId, out var status))
                 {
@@ -44,11 +40,11 @@ namespace RezPls.Managers
                 }
             }
 
-            if (bad)
-            {
-                _config.UnmonitoredStatuses = _disabledStatusSet.Select(kvp => kvp.Key).ToHashSet();
-                _pi.SavePluginConfig(_config);
-            }
+            if (!bad)
+                return;
+
+            RezPls.Config.UnmonitoredStatuses = _disabledStatusSet.Select(kvp => kvp.Key).ToHashSet();
+            RezPls.Config.Save();
         }
 
         public void Swap(ushort statusId)
@@ -57,33 +53,33 @@ namespace RezPls.Managers
             {
                 for (var i = 0; i < _enabledStatusSet.Count; ++i)
                 {
-                    var element = _enabledStatusSet.ElementAt(i);
-                    if (element.Value.Item2 == status.Item2)
-                    {
-                        _disabledStatusSet.Add(element.Key, element.Value);
-                        _enabledStatusSet.Remove(element.Key);
-                        _config.UnmonitoredStatuses.Add(element.Key);
-                        --i;
-                    }
+                    var (key, value) = _enabledStatusSet.ElementAt(i);
+                    if (value.Item2 != status.Item2)
+                        continue;
+
+                    _disabledStatusSet.Add(key, value);
+                    _enabledStatusSet.Remove(key);
+                    RezPls.Config.UnmonitoredStatuses.Add(key);
+                    --i;
                 }
 
-                _pi.SavePluginConfig(_config);
+                RezPls.Config.Save();
             }
             else if (_disabledStatusSet.TryGetValue(statusId, out status))
             {
                 for (var i = 0; i < _disabledStatusSet.Count; ++i)
                 {
-                    var element = _disabledStatusSet.ElementAt(i);
-                    if (element.Value.Item2 == status.Item2)
-                    {
-                        _enabledStatusSet.Add(element.Key, element.Value);
-                        _disabledStatusSet.Remove(element.Key);
-                        _config.UnmonitoredStatuses.Remove(element.Key);
-                        --i;
-                    }
+                    var (key, value) = _disabledStatusSet.ElementAt(i);
+                    if (value.Item2 != status.Item2)
+                        continue;
+
+                    _enabledStatusSet.Add(key, value);
+                    _disabledStatusSet.Remove(key);
+                    RezPls.Config.UnmonitoredStatuses.Remove(key);
+                    --i;
                 }
 
-                _pi.SavePluginConfig(_config);
+                RezPls.Config.Save();
             }
             else
             {
@@ -93,27 +89,27 @@ namespace RezPls.Managers
 
         public void ClearEnabledList()
         {
-            var previousCount = _config.UnmonitoredStatuses.Count;
-            foreach (var s in _enabledStatusSet)
+            var previousCount = RezPls.Config.UnmonitoredStatuses.Count;
+            foreach (var (key, value) in _enabledStatusSet)
             {
-                _disabledStatusSet.Add(s.Key, s.Value);
-                _config.UnmonitoredStatuses.Add(s.Key);
+                _disabledStatusSet.Add(key, value);
+                RezPls.Config.UnmonitoredStatuses.Add(key);
             }
 
             _enabledStatusSet.Clear();
-            if (previousCount != _config.UnmonitoredStatuses.Count)
-                _pi.SavePluginConfig(_config);
+            if (previousCount != RezPls.Config.UnmonitoredStatuses.Count)
+                RezPls.Config.Save();
         }
 
         public void ClearDisabledList()
         {
-            var previousCount = _config.UnmonitoredStatuses.Count;
-            foreach (var s in _disabledStatusSet)
-                _enabledStatusSet.Add(s.Key, s.Value);
+            var previousCount = RezPls.Config.UnmonitoredStatuses.Count;
+            foreach (var (key, value) in _disabledStatusSet)
+                _enabledStatusSet.Add(key, value);
             _disabledStatusSet.Clear();
-            _config.UnmonitoredStatuses.Clear();
+            RezPls.Config.UnmonitoredStatuses.Clear();
             if (previousCount != 0)
-                _pi.SavePluginConfig(_config);
+                RezPls.Config.Save();
         }
     }
 }

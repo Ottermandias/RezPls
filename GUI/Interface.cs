@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Numerics;
-using Dalamud.Plugin;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
 
 namespace RezPls.GUI
 {
@@ -12,38 +9,34 @@ namespace RezPls.GUI
     {
         public const string PluginName = "RezPls";
 
-        private readonly string                 _configHeader;
-        private readonly DalamudPluginInterface _pi;
-        private readonly RezPls                 _plugin;
-        private readonly RezPlsConfig           _config;
+        private readonly string _configHeader;
+        private readonly RezPls _plugin;
 
-        private string          _statusFilter = string.Empty;
-        private HashSet<string> _seenNames;
+        private          string          _statusFilter = string.Empty;
+        private readonly HashSet<string> _seenNames;
 
-        public bool Visible = false;
+        public bool Visible;
 
-        private void ChangeAndSave<T>(T value, T currentValue, Action<T> setter) where T : IEquatable<T>
+        private static void ChangeAndSave<T>(T value, T currentValue, Action<T> setter) where T : IEquatable<T>
         {
             if (value.Equals(currentValue))
                 return;
 
             setter(value);
-            _plugin.Save();
+            RezPls.Config.Save();
         }
 
-        public Interface(DalamudPluginInterface pi, RezPls plugin, RezPlsConfig config)
+        public Interface(RezPls plugin)
         {
-            _pi           = pi;
             _plugin       = plugin;
-            _config       = config;
             _configHeader = RezPls.Version.Length > 0 ? $"{PluginName} v{RezPls.Version}###{PluginName}" : PluginName;
             _seenNames    = new HashSet<string>(_plugin.StatusSet.DisabledStatusSet.Count + _plugin.StatusSet.EnabledStatusSet.Count);
 
-            _pi.UiBuilder.OnBuildUi      += Draw;
-            _pi.UiBuilder.OnOpenConfigUi += Enable;
+            RezPls.PluginInterface.UiBuilder.Draw         += Draw;
+            RezPls.PluginInterface.UiBuilder.OpenConfigUi += Enable;
         }
 
-        private void DrawCheckbox(string name, string tooltip, bool value, Action<bool> setter)
+        private static void DrawCheckbox(string name, string tooltip, bool value, Action<bool> setter)
         {
             var tmp = value;
             if (ImGui.Checkbox(name, ref tmp))
@@ -54,9 +47,9 @@ namespace RezPls.GUI
         }
 
         private void DrawEnabledCheckbox()
-            => DrawCheckbox("Enabled", "Enable or disable the plugin.", _config.Enabled, e =>
+            => DrawCheckbox("Enabled", "Enable or disable the plugin.", RezPls.Config.Enabled, e =>
             {
-                _config.Enabled = e;
+                RezPls.Config.Enabled = e;
                 if (e)
                     _plugin.Enable();
                 else
@@ -65,68 +58,69 @@ namespace RezPls.GUI
 
         private void DrawHideSymbolsOnSelfCheckbox()
             => DrawCheckbox("Hide Symbols on Self", "Hide the symbol and/or text drawn into the world on the player character.",
-                _config.HideSymbolsOnSelf,          e => _config.HideSymbolsOnSelf = e);
+                RezPls.Config.HideSymbolsOnSelf,    e => RezPls.Config.HideSymbolsOnSelf = e);
 
         private void DrawEnabledRaiseCheckbox()
             => DrawCheckbox("Enable Raise Highlighting",
-                "Highlight players being raised.", _config.EnabledRaise, e => _config.EnabledRaise = e);
+                "Highlight players being raised.", RezPls.Config.EnabledRaise, e => RezPls.Config.EnabledRaise = e);
 
         private void DrawShowGroupCheckbox()
             => DrawCheckbox("Highlight in Party Frames",
                 "Highlights players in your party frames according to your color and state selection.",
-                _config.ShowGroupFrame,
-                e => _config.ShowGroupFrame = e);
+                RezPls.Config.ShowGroupFrame,
+                e => RezPls.Config.ShowGroupFrame = e);
 
         private void DrawShowAllianceCheckbox()
             => DrawCheckbox("Highlight in Alliance Frames",
                 "Highlights players in your alliance frames according to your color and state selection.",
-                _config.ShowAllianceFrame,
-                e => _config.ShowAllianceFrame = e);
+                RezPls.Config.ShowAllianceFrame,
+                e => RezPls.Config.ShowAllianceFrame = e);
 
         private void DrawShowCasterNamesCheckbox()
             => DrawCheckbox("Write Caster Names",
                 "When highlighting players, also write the name of a caster resurrecting or cleansing them in the frame.",
-                _config.ShowCasterNames,
-                e => _config.ShowCasterNames = e);
+                RezPls.Config.ShowCasterNames,
+                e => RezPls.Config.ShowCasterNames = e);
 
         private void DrawShowIconCheckbox()
             => DrawCheckbox("Draw In World Icon",
-                "Draw a Raised icon on corpses that are already raised or currently being raised.", _config.ShowIcon,
-                e => _config.ShowIcon = e);
+                "Draw a Raised icon on corpses that are already raised or currently being raised.", RezPls.Config.ShowIcon,
+                e => RezPls.Config.ShowIcon = e);
 
         private void DrawShowIconDispelCheckbox()
             => DrawCheckbox("Draw In World Icon##Dispel",
-                "Draw a debuff icon on players that have a removable detrimental status effect.", _config.ShowIconDispel,
-                e => _config.ShowIconDispel = e);
+                "Draw a debuff icon on players that have a removable detrimental status effect.", RezPls.Config.ShowIconDispel,
+                e => RezPls.Config.ShowIconDispel = e);
 
         private void DrawShowInWorldTextCheckbox()
             => DrawCheckbox("Draw In World Text",
-                "Writes the current resurrector under a corpse currently being raised, or that he is already raised.", _config.ShowInWorldText,
-                e => _config.ShowInWorldText = e);
+                "Writes the current resurrector under a corpse currently being raised, or that he is already raised.",
+                RezPls.Config.ShowInWorldText,
+                e => RezPls.Config.ShowInWorldText = e);
 
         private void DrawShowInWorldTextDispelCheckbox()
             => DrawCheckbox("Draw In World Text##Dispel",
                 "Writes the current caster under an afflicted player currently being cleansed, or that he has a removable detrimental status effect.",
-                _config.ShowInWorldTextDispel,
-                e => _config.ShowInWorldTextDispel = e);
+                RezPls.Config.ShowInWorldTextDispel,
+                e => RezPls.Config.ShowInWorldTextDispel = e);
 
         private void DrawRestrictJobsCheckbox()
             => DrawCheckbox("Restrict to resurrecting Jobs",
                 "Only display the resurrecting information when you are a job with inherent raise capabilities.\n"
               + "CNJ, WHM, ACN, SCH, SMN, AST, BLU, RDM (at 64+)."
-              + "Ignores Lost and Logos Actions.\n", _config.RestrictedJobs,
-                e => _config.RestrictedJobs = e);
+              + "Ignores Lost and Logos Actions.\n", RezPls.Config.RestrictedJobs,
+                e => RezPls.Config.RestrictedJobs = e);
 
         private void DrawDispelHighlightingCheckbox()
             => DrawCheckbox("Enable Cleanse Highlighting",
                 "Highlight players with removable detrimental status effects.",
-                _config.EnabledDispel, e => _config.EnabledDispel = e);
+                RezPls.Config.EnabledDispel, e => RezPls.Config.EnabledDispel = e);
 
         private void DrawRestrictJobsDispelCheckbox()
             => DrawCheckbox("Restrict to cleansing Jobs",
                 "Only displays the cleansing information when you are a job with inherent cleanse capabilities.\n"
               + "CNJ, WHM, SCH, AST, BRD (at 35+), BLU",
-                _config.RestrictedJobsDispel, e => _config.RestrictedJobsDispel = e);
+                RezPls.Config.RestrictedJobsDispel, e => RezPls.Config.RestrictedJobsDispel = e);
 
 
         private void DrawSingleStatusEffectList(string header, bool which, float width)
@@ -212,39 +206,40 @@ namespace RezPls.GUI
         private void DrawCurrentRaiseColorPicker()
             => DrawColorPicker("Currently Being Raised",
                 "The highlight color for a player that is currently being raised by other players or only by yourself.",
-                _config.CurrentlyRaisingColor, RezPlsConfig.DefaultCurrentlyRaisingColor, c => _config.CurrentlyRaisingColor = c);
+                RezPls.Config.CurrentlyRaisingColor, RezPlsConfig.DefaultCurrentlyRaisingColor, c => RezPls.Config.CurrentlyRaisingColor = c);
 
         private void DrawAlreadyRaisedColorPicker()
             => DrawColorPicker("Already Raised",
                 "The highlight color for a player that is already raised and not also currently being raised by yourself.",
-                _config.RaisedColor, RezPlsConfig.DefaultRaisedColor, c => _config.RaisedColor = c);
+                RezPls.Config.RaisedColor, RezPlsConfig.DefaultRaisedColor, c => RezPls.Config.RaisedColor = c);
 
         private void DrawDoubleRaiseColorPicker()
             => DrawColorPicker("Redundant Cast",
                 "The highlight color for a player that you are currently raising if they are already raised or someone else is also raising them,\n"
               + "if you and another player cleanse them, or if you cleanse someone without monitored detrimental status effects.",
-                _config.DoubleRaiseColor, RezPlsConfig.DefaultDoubleRaiseColor, c => _config.DoubleRaiseColor = c);
+                RezPls.Config.DoubleRaiseColor, RezPlsConfig.DefaultDoubleRaiseColor, c => RezPls.Config.DoubleRaiseColor = c);
 
         private void DrawInWorldBackgroundColorPicker()
             => DrawColorPicker("In World Background",
                 "The background color for text that is drawn into the world on corpses for raises.",
-                _config.InWorldBackgroundColor, RezPlsConfig.DefaultInWorldBackgroundColorRaise, c => _config.InWorldBackgroundColor = c);
+                RezPls.Config.InWorldBackgroundColor, RezPlsConfig.DefaultInWorldBackgroundColorRaise,
+                c => RezPls.Config.InWorldBackgroundColor = c);
 
         private void DrawInWorldBackgroundColorPickerDispel()
             => DrawColorPicker("In World Background (Cleanse)",
                 "The background color for text that is drawn into the world on characters that are afflicted by a watched detrimental status effect.",
-                _config.InWorldBackgroundColorDispel, RezPlsConfig.DefaultInWorldBackgroundColorDispel,
-                c => _config.InWorldBackgroundColorDispel = c);
+                RezPls.Config.InWorldBackgroundColorDispel, RezPlsConfig.DefaultInWorldBackgroundColorDispel,
+                c => RezPls.Config.InWorldBackgroundColorDispel = c);
 
         private void DrawDispellableColorPicker()
             => DrawColorPicker("Has Monitored Status Effect",
                 "The highlight color for a player that has any monitored detrimental status effect.",
-                _config.DispellableColor, RezPlsConfig.DefaultDispellableColor, c => _config.DispellableColor = c);
+                RezPls.Config.DispellableColor, RezPlsConfig.DefaultDispellableColor, c => RezPls.Config.DispellableColor = c);
 
         private void DrawCurrentlyDispelledColorPicker()
             => DrawColorPicker("Currently Being Cleansed",
                 "The highlight color for a player that is currently being cleansed by other players or only by yourself.",
-                _config.CurrentlyDispelColor, RezPlsConfig.DefaultCurrentlyDispelColor, c => _config.CurrentlyDispelColor = c);
+                RezPls.Config.CurrentlyDispelColor, RezPlsConfig.DefaultCurrentlyDispelColor, c => RezPls.Config.CurrentlyDispelColor = c);
 
         private void DrawScaleButton()
         {
@@ -252,9 +247,9 @@ namespace RezPls.GUI
             const float max  = 3.0f;
             const float step = 0.005f;
 
-            var tmp = _config.IconScale;
+            var tmp = RezPls.Config.IconScale;
             if (ImGui.DragFloat("In World Icon Scale", ref tmp, step, min, max))
-                ChangeAndSave(tmp, _config.IconScale, f => _config.IconScale = Math.Max(min, Math.Min(f, max)));
+                ChangeAndSave(tmp, RezPls.Config.IconScale, f => RezPls.Config.IconScale = Math.Max(min, Math.Min(f, max)));
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Set the scale of the Raised icon that is drawn into the world on raised corpses.");
         }
@@ -269,11 +264,11 @@ namespace RezPls.GUI
 
         private void DrawRectTypeSelector()
         {
-            var type = (int) _config.RectType;
+            var type = (int) RezPls.Config.RectType;
             if (!ImGui.Combo("Rectangle Type", ref type, RectTypeStrings, RectTypeStrings.Length))
                 return;
 
-            ChangeAndSave(type, (int) _config.RectType, t => _config.RectType = (RectType) t);
+            ChangeAndSave(type, (int) RezPls.Config.RectType, t => RezPls.Config.RectType = (RectType) t);
         }
 
         public void Draw()
@@ -350,13 +345,13 @@ namespace RezPls.GUI
             }
         }
 
-        public void Enable(object _1, object _2)
+        public void Enable(object? _1, object? _2)
             => Visible = true;
 
         public void Dispose()
         {
-            _pi.UiBuilder.OnBuildUi      -= Draw;
-            _pi.UiBuilder.OnOpenConfigUi -= Enable;
+            RezPls.PluginInterface.UiBuilder.Draw         -= Draw;
+            RezPls.PluginInterface.UiBuilder.OpenConfigUi -= Enable;
         }
     }
 }

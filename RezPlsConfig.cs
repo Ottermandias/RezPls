@@ -50,5 +50,17 @@ namespace RezPls
         public bool            ShowInWorldTextDispel        { get; set; } = true;
         public HashSet<ushort> UnmonitoredStatuses          { get; set; } = new();
 
+        public void Save()
+            => RezPls.PluginInterface.SavePluginConfig(this);
+
+        public static RezPlsConfig Load()
+        {
+            if (RezPls.PluginInterface.GetPluginConfig() is RezPlsConfig cfg)
+                return cfg;
+
+            cfg = new RezPlsConfig();
+            cfg.Save();
+            return cfg;
+        }
     }
 }

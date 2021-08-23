@@ -1,5 +1,10 @@
 ﻿using System.Reflection;
+using Dalamud.Data;
+using Dalamud.Game;
+using Dalamud.Game.ClientState;
+using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.Command;
+using Dalamud.Game.Gui;
 using Dalamud.Plugin;
 using RezPls.GUI;
 using RezPls.Managers;
@@ -13,38 +18,48 @@ namespace RezPls
 
         public static string Version = "";
 
-        private DalamudPluginInterface _pluginInterface = null!;
-        private ActorWatcher           _actorWatcher    = null!;
-        private Overlay                _overlay         = null!;
-        private Interface              _interface       = null!;
-        private RezPlsConfig           _config          = null!;
-        public  StatusSet              StatusSet        = null!;
+        public static DalamudPluginInterface PluginInterface { get; private set; } = null!;
+        public static CommandManager         CommandManager  { get; private set; } = null!;
+        public static DataManager            GameData        { get; private set; } = null!;
+        public static SigScanner             Scanner         { get; private set; } = null!;
+        public static GameGui                GameGui         { get; private set; } = null!;
+        public static Framework              Framework       { get; private set; } = null!;
+        public static RezPlsConfig           Config          { get; private set; } = null!;
+        public static ClientState            ClientState     { get; private set; } = null!;
+        public static ObjectTable            Objects         { get; private set; } = null!;
 
-        public void Initialize(DalamudPluginInterface pluginInterface)
+        private readonly ActorWatcher _actorWatcher;
+        private readonly Overlay      _overlay;
+        private readonly Interface    _interface;
+
+        public StatusSet StatusSet;
+
+        public RezPls(DalamudPluginInterface pluginInterface, CommandManager commandManager, DataManager gameData, SigScanner sigScanner
+            , GameGui gameGui, Framework framework, ClientState clientState, ObjectTable objects)
         {
-            _pluginInterface = pluginInterface;
-            Version          = Assembly.GetExecutingAssembly()?.GetName().Version.ToString() ?? "";
-            if (_pluginInterface.GetPluginConfig() is RezPlsConfig config)
-            {
-                _config = config;
-            }
-            else
-            {
-                _config = new RezPlsConfig();
-                Save();
-            }
+            PluginInterface = pluginInterface;
+            CommandManager  = commandManager;
+            GameData        = gameData;
+            Scanner         = sigScanner;
+            GameGui         = gameGui;
+            Framework       = framework;
+            ClientState     = clientState;
+            Objects         = objects;
 
-            StatusSet     = new StatusSet(_pluginInterface, _config);
-            _actorWatcher = new ActorWatcher(_pluginInterface, StatusSet);
-            _overlay      = new Overlay(_pluginInterface, _actorWatcher, _config);
-            _interface    = new Interface(_pluginInterface, this, _config);
+            Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+            Config  = RezPlsConfig.Load();
 
-            if (_config.Enabled)
+            StatusSet     = new StatusSet();
+            _actorWatcher = new ActorWatcher(StatusSet);
+            _overlay      = new Overlay(_actorWatcher);
+            _interface    = new Interface(this);
+
+            if (Config.Enabled)
                 Enable();
             else
                 Disable();
 
-            _pluginInterface.CommandManager.AddHandler("/rezpls", new CommandInfo(OnRezPls)
+            CommandManager.AddHandler("/rezpls", new CommandInfo(OnRezPls)
             {
                 HelpMessage = "Open the configuration window for RezPls.",
                 ShowInHelp  = true,
@@ -55,9 +70,6 @@ namespace RezPls
         {
             _interface!.Visible = !_interface.Visible;
         }
-
-        public void Save()
-            => _pluginInterface!.SavePluginConfig(_config);
 
         public void Enable()
         {
@@ -73,11 +85,10 @@ namespace RezPls
 
         public void Dispose()
         {
-            _pluginInterface!.CommandManager.RemoveHandler("/rezpls");
-            _interface?.Dispose();
-            _overlay?.Dispose();
-            _actorWatcher?.Dispose();
-            _pluginInterface?.Dispose();
+            CommandManager.RemoveHandler("/rezpls");
+            _interface.Dispose();
+            _overlay.Dispose();
+            _actorWatcher.Dispose();
         }
     }
 }
