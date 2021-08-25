@@ -14,9 +14,6 @@ namespace RezPls.GUI
 
         private Stack<Action>? _onDispose;
 
-        public ImGuiRaii()
-        { }
-
         public static ImGuiRaii NewGroup()
             => new ImGuiRaii().Group();
 
