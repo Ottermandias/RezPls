@@ -18,7 +18,7 @@ namespace RezPls.Managers
 
         public HudManager()
         {
-            UpdateParty updateParty = new(RezPls.Scanner);
+            UpdateParty updateParty = new(Dalamud.SigScanner);
             _updatePartyHook = updateParty.CreateHook(UpdatePartyHook)!;
         }
 

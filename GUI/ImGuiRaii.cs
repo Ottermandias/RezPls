@@ -7,12 +7,12 @@ namespace RezPls.GUI
 {
     public sealed class ImGuiRaii : IDisposable
     {
-        private int   _colorStack  = 0;
-        private int   _fontStack   = 0;
-        private int   _styleStack  = 0;
-        private float _indentation = 0f;
+        private int   _colorStack;
+        private int   _fontStack;
+        private int   _styleStack;
+        private float _indentation;
 
-        private Stack<Action>? _onDispose = null;
+        private Stack<Action>? _onDispose;
 
         public ImGuiRaii()
         { }

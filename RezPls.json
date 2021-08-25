@@ -19,8 +19,8 @@
   "LastUpdate": 0,
   "DownloadLinkInstall": null,
   "DownloadLinkUpdate": null,
-  "DownloadLinkTesting": null,
+  "DownloadLinkTesting": "https://github.com/Ottermandias/RezPls/raw/master/RezPls.zip",
   "LoadPriority": 0,
   "ImageUrls": [],
-  "IconUrl": "https://github.com/Ottermandias/RezPls/raw/api4/Icon.png"
+  "IconUrl": "https://github.com/Ottermandias/RezPls/raw/master/Icon.png"
 }

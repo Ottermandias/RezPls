@@ -32,8 +32,8 @@ namespace RezPls.GUI
             _configHeader = RezPls.Version.Length > 0 ? $"{PluginName} v{RezPls.Version}###{PluginName}" : PluginName;
             _seenNames    = new HashSet<string>(_plugin.StatusSet.DisabledStatusSet.Count + _plugin.StatusSet.EnabledStatusSet.Count);
 
-            RezPls.PluginInterface.UiBuilder.Draw         += Draw;
-            RezPls.PluginInterface.UiBuilder.OpenConfigUi += Enable;
+            Dalamud.PluginInterface.UiBuilder.Draw         += Draw;
+            Dalamud.PluginInterface.UiBuilder.OpenConfigUi += Enable;
         }
 
         private static void DrawCheckbox(string name, string tooltip, bool value, Action<bool> setter)
@@ -345,13 +345,13 @@ namespace RezPls.GUI
             }
         }
 
-        public void Enable(object? _1, object? _2)
+        public void Enable()
             => Visible = true;
 
         public void Dispose()
         {
-            RezPls.PluginInterface.UiBuilder.Draw         -= Draw;
-            RezPls.PluginInterface.UiBuilder.OpenConfigUi -= Enable;
+            Dalamud.PluginInterface.UiBuilder.Draw         -= Draw;
+            Dalamud.PluginInterface.UiBuilder.OpenConfigUi -= Enable;
         }
     }
 }

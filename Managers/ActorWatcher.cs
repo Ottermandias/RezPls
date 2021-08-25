@@ -55,11 +55,11 @@ namespace RezPls.Managers
         public ActorWatcher(StatusSet statusSet)
         {
             _statusSet   = statusSet;
-            _territories = RezPls.GameData.GetExcelSheet<TerritoryType>()!;
+            _territories = Dalamud.GameData.GetExcelSheet<TerritoryType>()!;
 
-            CheckPvP(null!, RezPls.ClientState.TerritoryType);
+            CheckPvP(null!, Dalamud.ClientState.TerritoryType);
 
-            _actorTablePtr = RezPls.Objects.Address;
+            _actorTablePtr = Dalamud.Objects.Address;
         }
 
         public void Enable()
@@ -67,8 +67,8 @@ namespace RezPls.Managers
             if (_enabled)
                 return;
 
-            RezPls.Framework.Update             += OnFrameworkUpdate;
-            RezPls.ClientState.TerritoryChanged += CheckPvP;
+            Dalamud.Framework.Update             += OnFrameworkUpdate;
+            Dalamud.ClientState.TerritoryChanged += CheckPvP;
             _enabled                            =  true;
         }
 
@@ -77,8 +77,8 @@ namespace RezPls.Managers
             if (!_enabled)
                 return;
 
-            RezPls.Framework.Update             -= OnFrameworkUpdate;
-            RezPls.ClientState.TerritoryChanged -= CheckPvP;
+            Dalamud.Framework.Update             -= OnFrameworkUpdate;
+            Dalamud.ClientState.TerritoryChanged -= CheckPvP;
             _enabled                            =  false;
             RezList.Clear();
             PlayerRez = (0, ActorState.Nothing);

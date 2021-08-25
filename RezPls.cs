@@ -1,51 +1,30 @@
 ﻿using System.Reflection;
-using Dalamud.Data;
-using Dalamud.Game;
-using Dalamud.Game.ClientState;
-using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
 using Dalamud.Plugin;
 using RezPls.GUI;
 using RezPls.Managers;
 
 namespace RezPls
 {
-    public class RezPls : IDalamudPlugin
+    // auto-format:off
+
+    public partial class RezPls : IDalamudPlugin
     {
         public string Name
             => "RezPls";
 
         public static string Version = "";
 
-        public static DalamudPluginInterface PluginInterface { get; private set; } = null!;
-        public static CommandManager         CommandManager  { get; private set; } = null!;
-        public static DataManager            GameData        { get; private set; } = null!;
-        public static SigScanner             Scanner         { get; private set; } = null!;
-        public static GameGui                GameGui         { get; private set; } = null!;
-        public static Framework              Framework       { get; private set; } = null!;
-        public static RezPlsConfig           Config          { get; private set; } = null!;
-        public static ClientState            ClientState     { get; private set; } = null!;
-        public static ObjectTable            Objects         { get; private set; } = null!;
-
+        public static    RezPlsConfig Config { get; private set; } = null!;
         private readonly ActorWatcher _actorWatcher;
         private readonly Overlay      _overlay;
         private readonly Interface    _interface;
 
         public StatusSet StatusSet;
 
-        public RezPls(DalamudPluginInterface pluginInterface, CommandManager commandManager, DataManager gameData, SigScanner sigScanner
-            , GameGui gameGui, Framework framework, ClientState clientState, ObjectTable objects)
+        public RezPls(DalamudPluginInterface pluginInterface)
         {
-            PluginInterface = pluginInterface;
-            CommandManager  = commandManager;
-            GameData        = gameData;
-            Scanner         = sigScanner;
-            GameGui         = gameGui;
-            Framework       = framework;
-            ClientState     = clientState;
-            Objects         = objects;
-
+            Dalamud.Initialize(pluginInterface);
             Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
             Config  = RezPlsConfig.Load();
 
@@ -58,8 +37,7 @@ namespace RezPls
                 Enable();
             else
                 Disable();
-
-            CommandManager.AddHandler("/rezpls", new CommandInfo(OnRezPls)
+            Dalamud.Commands.AddHandler("/rezpls", new CommandInfo(OnRezPls)
             {
                 HelpMessage = "Open the configuration window for RezPls.",
                 ShowInHelp  = true,
@@ -85,7 +63,7 @@ namespace RezPls
 
         public void Dispose()
         {
-            CommandManager.RemoveHandler("/rezpls");
+            Dalamud.Commands.RemoveHandler("/rezpls");
             _interface.Dispose();
             _overlay.Dispose();
             _actorWatcher.Dispose();

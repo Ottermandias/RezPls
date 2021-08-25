@@ -9,6 +9,7 @@ using Dalamud.Logging;
 using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
+using Lumina.Data.Files;
 using RezPls.Enums;
 using RezPls.Managers;
 
@@ -38,8 +39,8 @@ namespace RezPls.GUI
             if (_enabled)
                 return;
 
-            _enabled                              =  true;
-            RezPls.PluginInterface.UiBuilder.Draw += Draw;
+            _enabled                               =  true;
+            Dalamud.PluginInterface.UiBuilder.Draw += Draw;
         }
 
         public void Disable()
@@ -47,8 +48,8 @@ namespace RezPls.GUI
             if (!_enabled)
                 return;
 
-            _enabled                              =  false;
-            RezPls.PluginInterface.UiBuilder.Draw -= Draw;
+            _enabled                               =  false;
+            Dalamud.PluginInterface.UiBuilder.Draw -= Draw;
         }
 
         private readonly        ImGuiScene.TextureWrap? _raiseIcon;
@@ -58,6 +59,12 @@ namespace RezPls.GUI
 
         private bool _drawRaises  = true;
         private bool _drawDispels = true;
+
+        private static TexFile? GetHdIcon(uint id)
+        {
+            var path = $"ui/icon/{id / 1000 * 1000:000000}/{id:000000}_hr1.tex";
+            return Dalamud.GameData.GetFile<TexFile>(path);
+        }
 
         private static ImGuiScene.TextureWrap? BuildRaiseIcon()
         {
@@ -69,19 +76,19 @@ namespace RezPls.GUI
                 using MemoryStream ms = new();
                 resource.CopyTo(ms);
                 var bytes = ms.ToArray();
-                var wrap  = RezPls.PluginInterface.UiBuilder.LoadImageRaw(bytes, 48, 64, 4);
+                var wrap  = Dalamud.PluginInterface.UiBuilder.LoadImageRaw(bytes, 48, 64, 4);
                 if (wrap != null)
                     return wrap;
             }
 
-            var hd = RezPls.GameData.GetHqIcon(raiseIconId);
+            var hd = GetHdIcon(raiseIconId);
             if (hd != null)
-                return RezPls.PluginInterface.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
+                return Dalamud.PluginInterface.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
 
-            var texFile = RezPls.GameData.GetIcon(raiseIconId);
+            var texFile = Dalamud.GameData.GetIcon(raiseIconId);
             return texFile == null
                 ? null
-                : RezPls.PluginInterface.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
+                : Dalamud.PluginInterface.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
         }
 
         private static readonly Vector2 DefaultIconSize = new(48, 64);
@@ -90,14 +97,14 @@ namespace RezPls.GUI
         {
             const int dispelIconId = 15019;
 
-            var hd = RezPls.GameData.GetHqIcon(dispelIconId);
+            var hd = GetHdIcon(dispelIconId);
             if (hd != null)
-                return RezPls.PluginInterface.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
+                return Dalamud.PluginInterface.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
 
-            var texFile = RezPls.GameData.GetIcon(dispelIconId);
+            var texFile = Dalamud.GameData.GetIcon(dispelIconId);
             return texFile == null
                 ? null
-                : RezPls.PluginInterface.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
+                : Dalamud.PluginInterface.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
         }
 
         public Overlay(ActorWatcher actorWatcher)
@@ -346,13 +353,13 @@ namespace RezPls.GUI
             if (!_drawRaises && !_drawDispels)
                 return;
 
-            var party     = (AtkUnitBase*) RezPls.GameGui.GetAddonByName("_PartyList", 1);
+            var party     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_PartyList", 1);
             var drawParty = RezPls.Config.ShowGroupFrame && party != null && party->IsVisible;
 
-            var alliance1     = (AtkUnitBase*) RezPls.GameGui.GetAddonByName("_AllianceList1", 1);
+            var alliance1     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList1", 1);
             var drawAlliance1 = RezPls.Config.ShowAllianceFrame && alliance1 != null && alliance1->IsVisible;
 
-            var alliance2     = (AtkUnitBase*) RezPls.GameGui.GetAddonByName("_AllianceList2", 1);
+            var alliance2     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList2", 1);
             var drawAlliance2 = RezPls.Config.ShowAllianceFrame && alliance2 != null && alliance2->IsVisible;
 
             var anyParty = drawParty || drawAlliance1 || drawAlliance2;
@@ -402,7 +409,7 @@ namespace RezPls.GUI
                     return;
 
                 var pos = GetActorPosition(corpse);
-                if (pos != null && RezPls.GameGui.WorldToScreen(pos.Value, out var screenPos))
+                if (pos != null && Dalamud.GameGui.WorldToScreen(pos.Value, out var screenPos))
                     DrawInWorld(screenPos, name, state);
             }
 

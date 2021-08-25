@@ -21,7 +21,7 @@ namespace RezPls.Managers
 
         public StatusSet()
         {
-            var sheet = RezPls.GameData.GetExcelSheet<Status>();
+            var sheet = Dalamud.GameData.GetExcelSheet<Status>();
             _enabledStatusSet = new SortedList<ushort, (Status, string)>(sheet!.Where(s => s.CanDispel && s.Name.RawData.Length > 0)
                 .ToDictionary(s => (ushort) s.RowId, s => (s, s.Name.ToString().ToLowerInvariant())));
             _disabledStatusSet = new SortedList<ushort, (Status, string)>(_enabledStatusSet.Count);
