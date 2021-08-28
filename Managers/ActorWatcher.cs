@@ -69,7 +69,7 @@ namespace RezPls.Managers
 
             Dalamud.Framework.Update             += OnFrameworkUpdate;
             Dalamud.ClientState.TerritoryChanged += CheckPvP;
-            _enabled                            =  true;
+            _enabled                             =  true;
         }
 
         public void Disable()
@@ -79,7 +79,7 @@ namespace RezPls.Managers
 
             Dalamud.Framework.Update             -= OnFrameworkUpdate;
             Dalamud.ClientState.TerritoryChanged -= CheckPvP;
-            _enabled                            =  false;
+            _enabled                             =  false;
             RezList.Clear();
             PlayerRez = (0, ActorState.Nothing);
         }
@@ -140,8 +140,8 @@ namespace RezPls.Managers
             return new Vector3
             {
                 X = *(float*) (actorPtr + actorPositionOffset),
-                Y = *(float*) (actorPtr + actorPositionOffset + 8),
-                Z = *(float*) (actorPtr + actorPositionOffset + 4),
+                Y = *(float*) (actorPtr + actorPositionOffset + 4),
+                Z = *(float*) (actorPtr + actorPositionOffset + 8),
             };
         }
 
