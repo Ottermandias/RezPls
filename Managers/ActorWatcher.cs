@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Types;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
 using RezPls.Enums;
@@ -40,6 +41,7 @@ namespace RezPls.Managers
 
     public class ActorWatcher : IDisposable
     {
+        public static    int                       TestMode;
         private          bool                      _outsidePvP = true;
         private          bool                      _enabled;
         private readonly StatusSet                 _statusSet;
@@ -271,6 +273,51 @@ namespace RezPls.Managers
             }
         }
 
+        private void ActorNamesAdd(GameObject actor)
+        {
+            if (!ActorNames.TryGetValue(actor.ObjectId, out var name))
+                ActorNames[actor.ObjectId] = actor.Name.ToString();
+        }
+
+        private unsafe void HandleTestMode()
+        {
+            var p = Dalamud.ClientState.LocalPlayer;
+            if (p == null)
+                return;
+
+            ActorNamesAdd(p);
+            ActorPositions[p.ObjectId] = GetActorPosition((byte*) p.Address);
+
+            var t         = Dalamud.Targets.Target ?? p;
+            var tObjectId = Dalamud.Targets.Target?.ObjectId ?? 10;
+            switch (TestMode)
+            {
+                case 1:
+                    RezList[p.ObjectId] = new ActorState(0, CastType.Raise, false);
+                    return;
+                case 2:
+                    RezList[p.ObjectId] = new ActorState(t.ObjectId, CastType.Raise, false);
+                    ActorNamesAdd(t);
+                    return;
+                case 3:
+                    RezList[p.ObjectId] = new ActorState(tObjectId, CastType.Raise, false);
+                    PlayerRez           = (p.ObjectId, new ActorState(p.ObjectId, CastType.Raise, false));
+                    return;
+                case 4:
+                    RezList[p.ObjectId] = new ActorState(0, CastType.None, true);
+                    return;
+                case 5:
+                    RezList[p.ObjectId] = new ActorState(t.ObjectId, CastType.Dispel, true);
+                    ActorNamesAdd(t);
+                    return;
+                case 6:
+                    RezList[p.ObjectId] = new ActorState(tObjectId, CastType.Dispel, false);
+                    PlayerRez           = (p.ObjectId, new ActorState(p.ObjectId, CastType.Raise, true));
+                    return;
+            }
+        }
+
+
         public void OnFrameworkUpdate(object _)
         {
             if (!_outsidePvP)
@@ -278,7 +325,10 @@ namespace RezPls.Managers
 
             RezList.Clear();
             PlayerRez = (0, PlayerRez.Item2);
-            IterateActors();
+            if (TestMode == 0)
+                IterateActors();
+            else
+                HandleTestMode();
         }
     }
 }

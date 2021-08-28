@@ -47,7 +47,7 @@ namespace RezPls
         //[PluginService][RequiredVersion("1.0")] public static PartyFinderGui         PartyFinder     { get; private set; } = null!;
         //[PluginService][RequiredVersion("1.0")] public static BuddyList              Buddies         { get; private set; } = null!;
         //[PluginService][RequiredVersion("1.0")] public static PartyList              Party           { get; private set; } = null!;
-        //[PluginService][RequiredVersion("1.0")] public static TargetManager          Targets         { get; private set; } = null!;
+        [PluginService][RequiredVersion("1.0")] public static TargetManager          Targets         { get; private set; } = null!;
         [PluginService][RequiredVersion("1.0")] public static ObjectTable            Objects         { get; private set; } = null!;
         //[PluginService][RequiredVersion("1.0")] public static FateTable              Fates           { get; private set; } = null!;
         //[PluginService][RequiredVersion("1.0")] public static LibcFunction           LibC            { get; private set; } = null!;

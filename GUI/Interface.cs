@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using ImGuiNET;
+using RezPls.Managers;
 
 namespace RezPls.GUI
 {
@@ -16,6 +17,8 @@ namespace RezPls.GUI
         private readonly HashSet<string> _seenNames;
 
         public bool Visible;
+
+        public bool TestMode = false;
 
         private static void ChangeAndSave<T>(T value, T currentValue, Action<T> setter) where T : IEquatable<T>
         {
@@ -122,6 +125,35 @@ namespace RezPls.GUI
               + "CNJ, WHM, SCH, AST, BRD (at 35+), BLU",
                 RezPls.Config.RestrictedJobsDispel, e => RezPls.Config.RestrictedJobsDispel = e);
 
+        private void DrawTestModeCheckBox1()
+            => DrawCheckbox("Test Player Raised", "Should show the active \"Already Raised\" effects on the player character and party frames.",
+                ActorWatcher.TestMode == 1,       e => ActorWatcher.TestMode = e ? 1 : 0);
+
+        private void DrawTestModeCheckBox2()
+            => DrawCheckbox("Test Player Being Raised by Target",
+                "Should show the active \"Currently Being Raised\" effects on the player character and party frames, as if the caster is its current target.",
+                ActorWatcher.TestMode == 2, e => ActorWatcher.TestMode = e ? 2 : 0);
+
+        private void DrawTestModeCheckBox3()
+            => DrawCheckbox("Test Player Unnecessary Raise",
+                "Should show the active \"Unnecessary Raise\" effects on the player character, as if the player character and its current target raise it.",
+                ActorWatcher.TestMode == 3, e => ActorWatcher.TestMode = e ? 3 : 0);
+
+        private void DrawTestModeCheckBox4()
+            => DrawCheckbox("Test Player Negative Status Effect",
+                "Should show the active \"Has Monitored Status Effect\" effects on the player character, as if the player character has a monitored condition.",
+                ActorWatcher.TestMode == 4, e => ActorWatcher.TestMode = e ? 4 : 0);
+
+        private void DrawTestModeCheckBox5()
+            => DrawCheckbox("Test Player Negative Status Effect Being Cleansed",
+                "Should show the active \"Currently Being Cleaned\" effects on the player character, as if it is being cleansed by its current target.",
+                ActorWatcher.TestMode == 5, e => ActorWatcher.TestMode = e ? 5 : 0);
+
+        private void DrawTestModeCheckBox6()
+            => DrawCheckbox("Test Player Unnecessary Cleanse",
+                "Should show the active \"Unnecessary Cleanse\" effects on the player character, as if it uses a double cleanse or a cleanse with no monitored status.",
+                ActorWatcher.TestMode == 6, e => ActorWatcher.TestMode = e ? 6 : 0);
+
 
         private void DrawSingleStatusEffectList(string header, bool which, float width)
         {
@@ -207,6 +239,7 @@ namespace RezPls.GUI
             => DrawColorPicker("Currently Being Raised",
                 "The highlight color for a player that is currently being raised by other players or only by yourself.",
                 RezPls.Config.CurrentlyRaisingColor, RezPlsConfig.DefaultCurrentlyRaisingColor, c => RezPls.Config.CurrentlyRaisingColor = c);
+
 
         private void DrawAlreadyRaisedColorPicker()
             => DrawColorPicker("Already Raised",
@@ -337,6 +370,16 @@ namespace RezPls.GUI
                     DrawInWorldBackgroundColorPicker();
                     DrawInWorldBackgroundColorPickerDispel();
                     ImGui.Dummy(horizontalSpacing);
+                }
+
+                if (ImGui.CollapsingHeader("Testing"))
+                {
+                    DrawTestModeCheckBox1();
+                    DrawTestModeCheckBox2();
+                    DrawTestModeCheckBox3();
+                    DrawTestModeCheckBox4();
+                    DrawTestModeCheckBox5();
+                    DrawTestModeCheckBox6();
                 }
             }
             finally
