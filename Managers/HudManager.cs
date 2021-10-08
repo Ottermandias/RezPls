@@ -1,7 +1,6 @@
 ﻿using System;
-using Dalamud.Game;
 using Dalamud.Hooking;
-using Dalamud.Plugin;
+using Dalamud.Logging;
 using RezPls.SeFunctions;
 
 namespace RezPls.Managers
@@ -17,9 +16,9 @@ namespace RezPls.Managers
         private readonly Hook<UpdatePartyDelegate> _updatePartyHook;
         private          IntPtr                    _hudAgentPtr = IntPtr.Zero;
 
-        public HudManager(SigScanner scanner)
+        public HudManager()
         {
-            UpdateParty updateParty = new(scanner);
+            UpdateParty updateParty = new(Dalamud.SigScanner);
             _updatePartyHook = updateParty.CreateHook(UpdatePartyHook)!;
         }
 
@@ -131,8 +130,6 @@ namespace RezPls.Managers
         }
 
         public void Dispose()
-        {
-            _updatePartyHook?.Dispose();
-        }
+            => _updatePartyHook.Dispose();
     }
 }

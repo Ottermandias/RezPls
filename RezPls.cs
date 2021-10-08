@@ -6,45 +6,38 @@ using RezPls.Managers;
 
 namespace RezPls
 {
-    public class RezPls : IDalamudPlugin
+    // auto-format:off
+
+    public partial class RezPls : IDalamudPlugin
     {
         public string Name
             => "RezPls";
 
         public static string Version = "";
 
-        private DalamudPluginInterface _pluginInterface = null!;
-        private ActorWatcher           _actorWatcher    = null!;
-        private Overlay                _overlay         = null!;
-        private Interface              _interface       = null!;
-        private RezPlsConfig           _config          = null!;
-        public  StatusSet              StatusSet        = null!;
+        public static    RezPlsConfig Config { get; private set; } = null!;
+        private readonly ActorWatcher _actorWatcher;
+        private readonly Overlay      _overlay;
+        private readonly Interface    _interface;
 
-        public void Initialize(DalamudPluginInterface pluginInterface)
+        public StatusSet StatusSet;
+
+        public RezPls(DalamudPluginInterface pluginInterface)
         {
-            _pluginInterface = pluginInterface;
-            Version          = Assembly.GetExecutingAssembly()?.GetName().Version.ToString() ?? "";
-            if (_pluginInterface.GetPluginConfig() is RezPlsConfig config)
-            {
-                _config = config;
-            }
-            else
-            {
-                _config = new RezPlsConfig();
-                Save();
-            }
+            Dalamud.Initialize(pluginInterface);
+            Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+            Config  = RezPlsConfig.Load();
 
-            StatusSet     = new StatusSet(_pluginInterface, _config);
-            _actorWatcher = new ActorWatcher(_pluginInterface, StatusSet);
-            _overlay      = new Overlay(_pluginInterface, _actorWatcher, _config);
-            _interface    = new Interface(_pluginInterface, this, _config);
+            StatusSet     = new StatusSet();
+            _actorWatcher = new ActorWatcher(StatusSet);
+            _overlay      = new Overlay(_actorWatcher);
+            _interface    = new Interface(this);
 
-            if (_config.Enabled)
+            if (Config.Enabled)
                 Enable();
             else
                 Disable();
-
-            _pluginInterface.CommandManager.AddHandler("/rezpls", new CommandInfo(OnRezPls)
+            Dalamud.Commands.AddHandler("/rezpls", new CommandInfo(OnRezPls)
             {
                 HelpMessage = "Open the configuration window for RezPls.",
                 ShowInHelp  = true,
@@ -55,9 +48,6 @@ namespace RezPls
         {
             _interface!.Visible = !_interface.Visible;
         }
-
-        public void Save()
-            => _pluginInterface!.SavePluginConfig(_config);
 
         public void Enable()
         {
@@ -73,11 +63,10 @@ namespace RezPls
 
         public void Dispose()
         {
-            _pluginInterface!.CommandManager.RemoveHandler("/rezpls");
-            _interface?.Dispose();
-            _overlay?.Dispose();
-            _actorWatcher?.Dispose();
-            _pluginInterface?.Dispose();
+            Dalamud.Commands.RemoveHandler("/rezpls");
+            _interface.Dispose();
+            _overlay.Dispose();
+            _actorWatcher.Dispose();
         }
     }
 }

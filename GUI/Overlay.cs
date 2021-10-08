@@ -4,10 +4,9 @@ using System.ComponentModel;
 using System.IO;
 using System.Numerics;
 using System.Reflection;
-using Dalamud.Data.LuminaExtensions;
-using Dalamud.Game.ClientState.Actors;
 using Dalamud.Interface;
-using Dalamud.Plugin;
+using Dalamud.Logging;
+using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using Lumina.Data.Files;
@@ -18,10 +17,8 @@ namespace RezPls.GUI
 {
     public class Overlay : IDisposable
     {
-        private readonly DalamudPluginInterface _pluginInterface;
-        private readonly HudManager             _hudManager;
-        private readonly RezPlsConfig           _config;
-        private readonly ActorWatcher           _actorWatcher;
+        private readonly HudManager   _hudManager;
+        private readonly ActorWatcher _actorWatcher;
 
         private IReadOnlyDictionary<uint, ActorState> Resurrections
             => _actorWatcher.RezList;
@@ -29,21 +26,21 @@ namespace RezPls.GUI
         private IReadOnlyDictionary<uint, string> Names
             => _actorWatcher.ActorNames;
 
-        private IReadOnlyDictionary<uint, Position3> Positions
+        private IReadOnlyDictionary<uint, Vector3> Positions
             => _actorWatcher.ActorPositions;
 
         private (uint, ActorState) PlayerRez
             => _actorWatcher.PlayerRez;
 
-        private bool _enabled = false;
+        private bool _enabled;
 
         public void Enable()
         {
             if (_enabled)
                 return;
 
-            _enabled                             =  true;
-            _pluginInterface.UiBuilder.OnBuildUi += Draw;
+            _enabled                               =  true;
+            Dalamud.PluginInterface.UiBuilder.Draw += Draw;
         }
 
         public void Disable()
@@ -51,8 +48,8 @@ namespace RezPls.GUI
             if (!_enabled)
                 return;
 
-            _enabled                             =  false;
-            _pluginInterface.UiBuilder.OnBuildUi -= Draw;
+            _enabled                               =  false;
+            Dalamud.PluginInterface.UiBuilder.Draw -= Draw;
         }
 
         private readonly        ImGuiScene.TextureWrap? _raiseIcon;
@@ -63,7 +60,13 @@ namespace RezPls.GUI
         private bool _drawRaises  = true;
         private bool _drawDispels = true;
 
-        private static ImGuiScene.TextureWrap? BuildRaiseIcon(DalamudPluginInterface pi)
+        private static TexFile? GetHdIcon(uint id)
+        {
+            var path = $"ui/icon/{id / 1000 * 1000:000000}/{id:000000}_hr1.tex";
+            return Dalamud.GameData.GetFile<TexFile>(path);
+        }
+
+        private static ImGuiScene.TextureWrap? BuildRaiseIcon()
         {
             const int raiseIconId = 10406;
 
@@ -73,47 +76,43 @@ namespace RezPls.GUI
                 using MemoryStream ms = new();
                 resource.CopyTo(ms);
                 var bytes = ms.ToArray();
-                var wrap  = pi.UiBuilder.LoadImageRaw(bytes, 48, 64, 4);
+                var wrap  = Dalamud.PluginInterface.UiBuilder.LoadImageRaw(bytes, 48, 64, 4);
                 if (wrap != null)
                     return wrap;
             }
 
-            var hd = LoadIconHq(pi, raiseIconId);
+            var hd = GetHdIcon(raiseIconId);
             if (hd != null)
-                return pi.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
+                return Dalamud.PluginInterface.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
 
-            var texFile = pi.Data.GetIcon(raiseIconId);
-            return pi.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
-        }
-
-        private static TexFile? LoadIconHq(DalamudPluginInterface pi, int id)
-        {
-            var path = $"ui/icon/{id / 1000 * 1000:000000}/{id:000000}_hr1.tex";
-            return pi.Data.GetFile<TexFile>(path);
+            var texFile = Dalamud.GameData.GetIcon(raiseIconId);
+            return texFile == null
+                ? null
+                : Dalamud.PluginInterface.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
         }
 
         private static readonly Vector2 DefaultIconSize = new(48, 64);
 
-        private static ImGuiScene.TextureWrap? BuildDispelIcon(DalamudPluginInterface pi)
+        private static ImGuiScene.TextureWrap? BuildDispelIcon()
         {
             const int dispelIconId = 15019;
 
-            var hd = LoadIconHq(pi, dispelIconId);
+            var hd = GetHdIcon(dispelIconId);
             if (hd != null)
-                return pi.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
+                return Dalamud.PluginInterface.UiBuilder.LoadImageRaw(hd.GetRgbaImageData(), hd.Header.Width, hd.Header.Height, 4);
 
-            var texFile = pi.Data.GetIcon(dispelIconId);
-            return pi.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
+            var texFile = Dalamud.GameData.GetIcon(dispelIconId);
+            return texFile == null
+                ? null
+                : Dalamud.PluginInterface.UiBuilder.LoadImageRaw(texFile.GetRgbaImageData(), texFile.Header.Width, texFile.Header.Height, 4);
         }
 
-        public Overlay(DalamudPluginInterface pluginInterface, ActorWatcher actorWatcher, RezPlsConfig config)
+        public Overlay(ActorWatcher actorWatcher)
         {
-            _pluginInterface = pluginInterface;
-            _actorWatcher    = actorWatcher;
-            _hudManager      = new HudManager(_pluginInterface.TargetModuleScanner);
-            _raiseIcon       = BuildRaiseIcon(_pluginInterface);
-            _dispelIcon       = BuildDispelIcon(_pluginInterface);
-            _config          = config;
+            _actorWatcher = actorWatcher;
+            _hudManager   = new HudManager();
+            _raiseIcon    = BuildRaiseIcon();
+            _dispelIcon   = BuildDispelIcon();
         }
 
         public void Dispose()
@@ -129,22 +128,26 @@ namespace RezPls.GUI
             if (state.Caster == 0)
             {
                 if (state.HasStatus)
-                    return _drawDispels ? (CastType.Dispel, "Needs Cleanse", _config.ShowIconDispel, _config.ShowInWorldTextDispel) : (CastType.None, "", false, false);
-                return _drawRaises ? (CastType.Raise, "Already Raised", _config.ShowIcon, _config.ShowInWorldText) : (CastType.None, "", false, false);
+                    return _drawDispels
+                        ? (CastType.Dispel, "Needs Cleanse", RezPls.Config.ShowIconDispel, RezPls.Config.ShowInWorldTextDispel)
+                        : (CastType.None, "", false, false);
+
+                return _drawRaises
+                    ? (CastType.Raise, "Already Raised", RezPls.Config.ShowIcon, RezPls.Config.ShowInWorldText)
+                    : (CastType.None, "", false, false);
             }
 
             if (state.Type == CastType.Raise)
                 return _drawRaises
-                    ? (CastType.Raise, $"Raise: {name}", _config.ShowIcon, _config.ShowInWorldText)
+                    ? (CastType.Raise, $"Raise: {name}", RezPls.Config.ShowIcon, RezPls.Config.ShowInWorldText)
                     : (CastType.None, "", false, false);
 
             return _drawDispels
-                ? (CastType.Raise, $"Cleanse: {name}", _config.ShowIconDispel, _config.ShowInWorldTextDispel)
+                ? (CastType.Raise, $"Cleanse: {name}", RezPls.Config.ShowIconDispel, RezPls.Config.ShowInWorldTextDispel)
                 : (CastType.None, "", false, false);
-
         }
 
-        public void DrawInWorld(SharpDX.Vector2 pos, string name, ActorState state)
+        public void DrawInWorld(Vector2 pos, string name, ActorState state)
         {
             var (type, text, drawIcon, drawText) = GetText(name, state);
             if (type == CastType.None)
@@ -156,7 +159,7 @@ namespace RezPls.GUI
                 if (icon == null)
                     return;
 
-                var scaledIconSize = DefaultIconSize * _config.IconScale * ImGui.GetIO().FontGlobalScale;
+                var scaledIconSize = DefaultIconSize * RezPls.Config.IconScale * ImGui.GetIO().FontGlobalScale;
 
                 ImGui.SetCursorPos(new Vector2(pos.X - scaledIconSize.X / 2f, pos.Y - scaledIconSize.Y) - ImGui.GetMainViewport().Pos);
                 ImGui.Image(icon.ImGuiHandle, scaledIconSize);
@@ -164,16 +167,18 @@ namespace RezPls.GUI
 
             if (drawText)
             {
-                var color    = type == CastType.Dispel ? _config.InWorldBackgroundColorDispel : _config.InWorldBackgroundColor;
+                var color    = type == CastType.Dispel ? RezPls.Config.InWorldBackgroundColorDispel : RezPls.Config.InWorldBackgroundColor;
                 var textSize = ImGui.CalcTextSize(text);
-                ImGui.SetCursorPos(new Vector2(pos.X, pos.Y) - new Vector2(textSize.X / 2 + ImGui.GetStyle().FramePadding.X, 0) - ImGui.GetMainViewport().Pos);
+                ImGui.SetCursorPos(new Vector2(pos.X,                             pos.Y)
+                  - new Vector2(textSize.X / 2 + ImGui.GetStyle().FramePadding.X, 0)
+                  - ImGui.GetMainViewport().Pos);
                 using var imgui = new ImGuiRaii()
                     .PushColor(ImGuiCol.Button, color);
                 ImGui.Button(text);
             }
         }
 
-        public ImDrawListPtr? BeginRezRects()
+        private static ImDrawListPtr? BeginRezRects()
         {
             const ImGuiWindowFlags flags = ImGuiWindowFlags.NoDecoration
               | ImGuiWindowFlags.NoSavedSettings
@@ -306,7 +311,7 @@ namespace RezPls.GUI
             return Names.TryGetValue(caster, out var name2) ? name2 : "Unknown";
         }
 
-        private Position3? GetActorPosition(uint corpse)
+        private Vector3? GetActorPosition(uint corpse)
             => Positions.TryGetValue(corpse, out var pos) ? pos : null;
 
         private uint GetColor(uint corpse, ActorState state)
@@ -318,27 +323,26 @@ namespace RezPls.GUI
                     if (state.Type == CastType.Dispel && state.Caster != 0)
                     {
                         if (PlayerRez.Item1 == corpse && state.Caster != PlayerRez.Item2.Caster)
-                            return _config.DoubleRaiseColor;
+                            return RezPls.Config.DoubleRaiseColor;
 
-                        return _config.CurrentlyDispelColor;
+                        return RezPls.Config.CurrentlyDispelColor;
                     }
-                    return _config.DispellableColor;
+
+                    return RezPls.Config.DispellableColor;
                 }
 
                 if (state.Type == CastType.Dispel)
-                {
-                    return corpse == PlayerRez.Item1 ? _config.DoubleRaiseColor : 0;
-                }
+                    return corpse == PlayerRez.Item1 ? RezPls.Config.DoubleRaiseColor : 0;
             }
 
             if (_drawRaises)
             {
                 if (state.Caster == 0)
-                    return PlayerRez.Item1 != corpse ? _config.RaisedColor : _config.DoubleRaiseColor;
+                    return PlayerRez.Item1 != corpse ? RezPls.Config.RaisedColor : RezPls.Config.DoubleRaiseColor;
                 if (corpse == PlayerRez.Item1 && state.Caster != PlayerRez.Item2.Caster)
-                    return _config.DoubleRaiseColor;
+                    return RezPls.Config.DoubleRaiseColor;
 
-                return _config.CurrentlyRaisingColor;
+                return RezPls.Config.CurrentlyRaisingColor;
             }
 
             return 0;
@@ -349,14 +353,14 @@ namespace RezPls.GUI
             if (!_drawRaises && !_drawDispels)
                 return;
 
-            var party     = (AtkUnitBase*) _pluginInterface.Framework.Gui.GetUiObjectByName("_PartyList", 1);
-            var drawParty = _config.ShowGroupFrame && party != null && party->IsVisible;
+            var party     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_PartyList", 1);
+            var drawParty = RezPls.Config.ShowGroupFrame && party != null && party->IsVisible;
 
-            var alliance1     = (AtkUnitBase*) _pluginInterface.Framework.Gui.GetUiObjectByName("_AllianceList1", 1);
-            var drawAlliance1 = _config.ShowAllianceFrame && alliance1 != null && alliance1->IsVisible;
+            var alliance1     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList1", 1);
+            var drawAlliance1 = RezPls.Config.ShowAllianceFrame && alliance1 != null && alliance1->IsVisible;
 
-            var alliance2     = (AtkUnitBase*) _pluginInterface.Framework.Gui.GetUiObjectByName("_AllianceList2", 1);
-            var drawAlliance2 = _config.ShowAllianceFrame && alliance2 != null && alliance2->IsVisible;
+            var alliance2     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList2", 1);
+            var drawAlliance2 = RezPls.Config.ShowAllianceFrame && alliance2 != null && alliance2->IsVisible;
 
             var anyParty = drawParty || drawAlliance1 || drawAlliance2;
 
@@ -375,45 +379,42 @@ namespace RezPls.GUI
                     {
                         var color = GetColor(corpse, state);
                         if (color != 0)
-                        {
-
-
-                            switch (group.Value.groupIdx)
+                            switch (@group.Value.groupIdx)
                             {
                                 case 0:
                                     if (drawParty)
-                                        DrawPartyRect(drawPtr, party, group.Value.idx, color, _config.RectType, _config.ShowCasterNames, name);
+                                        DrawPartyRect(drawPtr,             party, @group.Value.idx, color, RezPls.Config.RectType,
+                                            RezPls.Config.ShowCasterNames, name);
                                     break;
                                 case 1:
                                     if (drawAlliance1)
-                                        DrawAllianceRect(drawPtr, alliance1, group.Value.idx, color, _config.RectType, _config.ShowCasterNames,
+                                        DrawAllianceRect(drawPtr, alliance1, @group.Value.idx, color, RezPls.Config.RectType,
+                                            RezPls.Config.ShowCasterNames,
                                             name);
                                     break;
                                 case 2:
                                     if (drawAlliance2)
-                                        DrawAllianceRect(drawPtr, alliance2, group.Value.idx, color, _config.RectType, _config.ShowCasterNames,
+                                        DrawAllianceRect(drawPtr, alliance2, @group.Value.idx, color, RezPls.Config.RectType,
+                                            RezPls.Config.ShowCasterNames,
                                             name);
                                     break;
                             }
-                        }
                     }
                 }
 
                 if (corpse == state.Caster)
                     return;
 
-                if (_config.HideSymbolsOnSelf && corpse == PlayerRez.Item2.Caster)
+                if (RezPls.Config.HideSymbolsOnSelf && corpse == PlayerRez.Item2.Caster)
                     return;
 
                 var pos = GetActorPosition(corpse);
-                if (pos != null && _pluginInterface.Framework.Gui.WorldToScreen(pos.Value, out var screenPos))
-                {
+                if (pos != null && Dalamud.GameGui.WorldToScreen(pos.Value, out var screenPos))
                     DrawInWorld(screenPos, name, state);
-                }
             }
 
-            foreach (var kvp in Resurrections)
-                DrawWhichRect(kvp.Key, kvp.Value);
+            foreach (var (actorId, state) in Resurrections)
+                DrawWhichRect(actorId, state);
         }
 
         public void Draw()
@@ -421,16 +422,16 @@ namespace RezPls.GUI
             if (Resurrections.Count == 0)
                 return;
 
-            _drawRaises  = _config.EnabledRaise;
-            _drawDispels = _config.EnabledDispel;
-            if (_config.RestrictedJobs || _config.RestrictedJobsDispel)
+            _drawRaises  = RezPls.Config.EnabledRaise;
+            _drawDispels = RezPls.Config.EnabledDispel;
+            if (RezPls.Config.RestrictedJobs || RezPls.Config.RestrictedJobsDispel)
             {
                 var (job, level) = _actorWatcher.CurrentPlayerJob();
 
                 if (!job.CanRaise() || job == Job.RDM && level < 64)
-                    _drawRaises &= !_config.RestrictedJobs;
+                    _drawRaises &= !RezPls.Config.RestrictedJobs;
                 if (!job.CanDispel() || job == Job.BRD && level < 35)
-                    _drawDispels &= !_config.RestrictedJobsDispel;
+                    _drawDispels &= !RezPls.Config.RestrictedJobsDispel;
             }
 
             var drawPtrOpt = BeginRezRects();
