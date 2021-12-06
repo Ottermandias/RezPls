@@ -10,7 +10,7 @@ namespace RezPls.Managers
         private const int GroupMemberOffset    = 0x0BE0;
         private const int AllianceMemberOffset = 0x0C4C;
         private const int AllianceSizeOffset   = 0x0CEC;
-        private const int GroupMemberSize      = 0x18;
+        private const int GroupMemberSize      = 0x20;
         private const int GroupMemberIdOffset  = 0x10;
 
         private readonly Hook<UpdatePartyDelegate> _updatePartyHook;
