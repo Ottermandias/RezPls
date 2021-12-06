@@ -7,7 +7,7 @@ namespace RezPls.Managers
 {
     public unsafe class HudManager : IDisposable
     {
-        private const int GroupMemberOffset    = 0x0B50;
+        private const int GroupMemberOffset    = 0x0BE0;
         private const int AllianceMemberOffset = 0x0C4C;
         private const int AllianceSizeOffset   = 0x0CEC;
         private const int GroupMemberSize      = 0x18;
@@ -113,7 +113,8 @@ namespace RezPls.Managers
             var pvp   = groupSize == 4 ? 1 : 0;
             for (var i = 0; i < count; ++i)
             {
-                if (*(uint*) (_hudAgentPtr + _idOffsets[pvp, i]) == actorId)
+                var id = *(uint*)(_hudAgentPtr + _idOffsets[pvp, i]);
+                if (id == actorId)
                     return (i / groupSize, i % groupSize);
             }
 

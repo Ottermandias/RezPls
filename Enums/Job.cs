@@ -41,6 +41,8 @@
         BlueMage      = 36,
         Gunbreaker    = 37,
         Dancer        = 38,
+        Reaper        = 39,
+        Sage          = 40,
 
         ADV = Unknown,
         GLD = Gladiator,
@@ -81,6 +83,8 @@
         BLU = BlueMage,
         GNB = Gunbreaker,
         DNC = Dancer,
+        RPR = Reaper,
+        SGE = Sage,
     }
 
     public static class JobExtensions
@@ -127,6 +131,8 @@
                 Job.BlueMage      => "BLU",
                 Job.Gunbreaker    => "GNB",
                 Job.Dancer        => "DNC",
+                Job.Reaper        => "RPR",
+                Job.Sage          => "SGE",
                 _                 => "ADV",
             };
         }
@@ -173,6 +179,8 @@
                 Job.BlueMage      => "Blue Mage",
                 Job.Gunbreaker    => "Gunbreaker",
                 Job.Dancer        => "Dancer",
+                Job.Reaper        => "Reaper",
+                Job.Sage          => "Sage",
                 _                 => "Adventurer",
             };
         }
@@ -189,6 +197,7 @@
                 Job.Astrologian => true,
                 Job.RedMage     => true,
                 Job.BlueMage    => true,
+                Job.Sage        => true,
                 _               => false,
             };
         }
@@ -203,6 +212,7 @@
                 Job.Astrologian => true,
                 Job.Bard        => true,
                 Job.BlueMage    => true,
+                Job.Sage        => true,
                 _               => false,
             };
         }

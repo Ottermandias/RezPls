@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
 using RezPls.Enums;
@@ -45,7 +47,6 @@ namespace RezPls.Managers
         private          bool                      _outsidePvP = true;
         private          bool                      _enabled;
         private readonly StatusSet                 _statusSet;
-        private readonly IntPtr                    _actorTablePtr;
         private const    int                       ActorTablePlayerLength = 200;
         private readonly ExcelSheet<TerritoryType> _territories;
 
@@ -60,8 +61,6 @@ namespace RezPls.Managers
             _territories = Dalamud.GameData.GetExcelSheet<TerritoryType>()!;
 
             CheckPvP(null!, Dalamud.ClientState.TerritoryType);
-
-            _actorTablePtr = Dalamud.Objects.Address;
         }
 
         public void Enable()
@@ -95,74 +94,42 @@ namespace RezPls.Managers
             _outsidePvP = !(row?.IsPvpZone ?? false);
         }
 
-        public unsafe (Job job, byte level) CurrentPlayerJob()
+        public (Job job, byte level) CurrentPlayerJob()
         {
-            var player = *(byte**) _actorTablePtr;
+            var player = Dalamud.ClientState.LocalPlayer;
             if (player == null || !IsPlayer(player))
                 return (Job.ADV, 0);
 
-            return (PlayerJob(player), PlayerLevel(player));
+            return (PlayerJob(player), player.Level);
         }
 
-        private static unsafe ushort GetCurrentCast(byte* actorPtr)
+        private static unsafe (uint, uint) GetCurrentCast(BattleChara player)
         {
-            const int    currentCastTypeOffset = 0x1B82;
-            const int    currentCastIdOffset   = 0x1B84;
-            const ushort currentCastIdSpell    = 0x01;
+            var battleChara = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
+            var cast        = battleChara->SpellCastInfo;
+            if (cast.ActionType != ActionType.Spell)
+                return (0, 0);
 
-            if (*(ushort*) (actorPtr + currentCastTypeOffset) != currentCastIdSpell)
-                return 0;
-
-            return *(ushort*) (actorPtr + currentCastIdOffset);
+            return (cast.ActionID, cast.CastTargetID);
         }
 
-        private static unsafe uint GetCastTarget(byte* actorPtr)
+        private static CastType GetCastType(uint castId)
         {
-            const int currentCastTargetOffset = 0x1B90;
-            return *(uint*) (actorPtr + currentCastTargetOffset);
-        }
-
-        private static unsafe uint GetActorId(byte* actorPtr)
-        {
-            const int actorIdOffset = 0x74;
-            return *(uint*) (actorPtr + actorIdOffset);
-        }
-
-        private static unsafe string GetActorName(byte* actorPtr)
-        {
-            const int actorNameOffset = 0x30;
-            const int actorNameLength = 30;
-
-            return Marshal.PtrToStringAnsi(new IntPtr(actorPtr) + actorNameOffset, actorNameLength).TrimEnd('\0');
-        }
-
-        private static unsafe Vector3 GetActorPosition(byte* actorPtr)
-        {
-            const int actorPositionOffset = 0xA0;
-            return new Vector3
+            return castId switch
             {
-                X = *(float*) (actorPtr + actorPositionOffset),
-                Y = *(float*) (actorPtr + actorPositionOffset + 4),
-                Z = *(float*) (actorPtr + actorPositionOffset + 8),
-            };
-        }
-
-        private static unsafe CastType GetCastType(byte* actorPtr)
-        {
-            return GetCurrentCast(actorPtr) switch
-            {
-                173   => CastType.Raise, // ACN, SMN, SCH
-                125   => CastType.Raise, // CNH, WHM
-                3603  => CastType.Raise, // AST
-                18317 => CastType.Raise, // BLU
-                208   => CastType.Raise, // WHM LB3
-                4247  => CastType.Raise, // SCH LB3
-                4248  => CastType.Raise, // AST LB3
-                7523  => CastType.Raise, // RDM
-                22345 => CastType.Raise, // Lost Sacrifice, Bozja
-                20730 => CastType.Raise, // Lost Arise, Bozja
-                12996 => CastType.Raise, // Raise L, Eureka
-
+                173   => CastType.Raise,  // ACN, SMN, SCH
+                125   => CastType.Raise,  // CNH, WHM
+                3603  => CastType.Raise,  // AST
+                18317 => CastType.Raise,  // BLU
+                208   => CastType.Raise,  // WHM LB3
+                4247  => CastType.Raise,  // SCH LB3
+                4248  => CastType.Raise,  // AST LB3
+                24859 => CastType.Raise,  // SGE LB3
+                7523  => CastType.Raise,  // RDM
+                22345 => CastType.Raise,  // Lost Sacrifice, Bozja
+                20730 => CastType.Raise,  // Lost Arise, Bozja
+                12996 => CastType.Raise,  // Raise L, Eureka
+                24287 => CastType.Raise,  // Egeiro
                 7568  => CastType.Dispel, // Esuna
                 3561  => CastType.Dispel, // The Warden's Paean, instant, so irrelevant
                 18318 => CastType.Dispel, // Exuviation
@@ -171,104 +138,75 @@ namespace RezPls.Managers
             };
         }
 
-        private static unsafe bool IsPlayer(byte* actorPtr)
+        private static bool IsPlayer(GameObject actor)
+            => actor.ObjectKind == ObjectKind.Player;
+
+        private static bool IsDead(Character player)
+            => player.CurrentHp <= 0;
+
+        private static Job PlayerJob(Character player)
+            => (Job)player.ClassJob.Id;
+
+        private CastType HasStatus(BattleChara player)
         {
-            const int  objectKindOffset = 0x8C;
-            const byte playerObjectKind = (byte) ObjectKind.Player;
-
-            return *(actorPtr + objectKindOffset) == playerObjectKind;
-        }
-
-        private static unsafe bool IsDead(byte* actorPtr)
-        {
-            const int currentHpOffset = 0x1C4;
-
-            return *(int*) (actorPtr + currentHpOffset) == 0;
-        }
-
-        private static unsafe Job PlayerJob(byte* actorPtr)
-        {
-            const int jobOffset = 0x1E2;
-            return *(Job*) (actorPtr + jobOffset);
-        }
-
-        private static unsafe byte PlayerLevel(byte* actorPtr)
-        {
-            const int jobOffset = 0x1E3;
-            return *(actorPtr + jobOffset);
-        }
-
-        private unsafe CastType HasStatus(byte* actorPtr)
-        {
-            const int statusEffectsOffset = 0x19F8;
-            const int statusEffectSize    = 12;
-            const int maxStatusEffects    = 20;
-
-            var start = actorPtr + statusEffectsOffset;
-            var end   = start + statusEffectSize * maxStatusEffects;
-            for (; start < end; start += 12)
+            foreach (var status in player.StatusList)
             {
-                var id = *(ushort*) start;
-
-                if (id == 148 || id == 1140)
+                if (status.StatusId is 148 or 1140)
                     return CastType.Raise;
-
-                if (_statusSet.IsEnabled(id))
+                if (_statusSet.IsEnabled((ushort)status.StatusId))
                     return CastType.Dispel;
             }
 
             return CastType.None;
         }
 
-        private unsafe void IterateActors()
+        private void IterateActors()
         {
-            var current = (byte**) _actorTablePtr;
-            var end     = current + ActorTablePlayerLength;
-            for (; current < end; current += 2)
+            for (var i = 0; i < ActorTablePlayerLength; i += 2)
             {
-                var actor = *current;
-                if (actor == null || !IsPlayer(actor))
+                var actor = Dalamud.Objects[i];
+                if (actor is not PlayerCharacter player)
                     continue;
 
-                if (IsDead(actor))
+                var actorId = player.ObjectId;
+                if (IsDead(player))
                 {
-                    var actorId = GetActorId(actor);
-                    ActorPositions[actorId] = GetActorPosition(actor);
-                    if (HasStatus(actor) == CastType.Raise)
+                    ActorPositions[actorId] = player.Position;
+                    if (HasStatus(player) == CastType.Raise)
                         RezList[actorId] = new ActorState(0, CastType.Raise, false);
                     if (!ActorNames.ContainsKey(actorId))
-                        ActorNames.Add(actorId, GetActorName(actor));
+                        ActorNames.Add(actorId, player.Name.TextValue);
                 }
                 else
                 {
-                    var cast        = GetCastType(actor);
-                    var dispellable = HasStatus(actor) == CastType.Dispel;
-                    if (cast == CastType.None && !dispellable)
+                    var (castId, castTarget)       = GetCurrentCast(player);
+                    var castType    = GetCastType(castId);
+                    var dispellable = HasStatus(player) == CastType.Dispel;
+                    if (castType == CastType.None && !dispellable)
                         continue;
 
-                    var actorId = GetActorId(actor);
                     if (dispellable)
                     {
                         RezList[actorId] = RezList.TryGetValue(actorId, out var state)
                             ? state.SetHasStatus(true)
                             : new ActorState(0, CastType.None, true);
-                        ActorPositions[actorId] = GetActorPosition(actor);
+                        ActorPositions[actorId] = player.Position;
                     }
 
                     if (!ActorNames.ContainsKey(actorId))
-                        ActorNames.Add(actorId, GetActorName(actor));
-                    var corpseId = GetCastTarget(actor);
-                    if (current == (byte**) _actorTablePtr)
-                        PlayerRez = (corpseId, new ActorState(actorId, cast, false));
+                        ActorNames.Add(actorId, player.Name.TextValue);
+                    if (i == 0)
+                        PlayerRez = (castTarget, new ActorState(actorId, castType, false));
 
-                    if (cast == CastType.Raise && (!RezList.TryGetValue(corpseId, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
-                        RezList[corpseId] = RezList.TryGetValue(corpseId, out var state)
-                            ? state.SetCasting(actorId, cast)
-                            : new ActorState(actorId, cast, false);
-                    if (cast == CastType.Dispel)
-                        RezList[corpseId] = RezList.TryGetValue(corpseId, out var state)
-                            ? state.SetCasting(actorId, cast)
-                            : new ActorState(actorId, cast, false);
+
+                    if (castType == CastType.Raise && (!RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
+                        RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
+                            ? state.SetCasting(actorId, castType)
+                            : new ActorState(actorId, castType, false);
+                    if (castType == CastType.Dispel)
+                        RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
+                            ? state.SetCasting(actorId, castType)
+                            : new ActorState(actorId, castType, false);
                 }
             }
         }
@@ -286,7 +224,7 @@ namespace RezPls.Managers
                 return;
 
             ActorNamesAdd(p);
-            ActorPositions[p.ObjectId] = GetActorPosition((byte*) p.Address);
+            ActorPositions[p.ObjectId] = p.Position;
 
             var t         = Dalamud.Targets.Target ?? p;
             var tObjectId = Dalamud.Targets.Target?.ObjectId ?? 10;
