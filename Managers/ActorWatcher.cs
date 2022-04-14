@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -179,7 +178,7 @@ namespace RezPls.Managers
                 }
                 else
                 {
-                    var (castId, castTarget)       = GetCurrentCast(player);
+                    var (castId, castTarget) = GetCurrentCast(player);
                     var castType    = GetCastType(castId);
                     var dispellable = HasStatus(player) == CastType.Dispel;
                     if (castType == CastType.None && !dispellable)
@@ -199,7 +198,8 @@ namespace RezPls.Managers
                         PlayerRez = (castTarget, new ActorState(actorId, castType, false));
 
 
-                    if (castType == CastType.Raise && (!RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
+                    if (castType == CastType.Raise
+                     && (!RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
                         RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
                             ? state.SetCasting(actorId, castType)
                             : new ActorState(actorId, castType, false);
