@@ -206,7 +206,7 @@ namespace RezPls.GUI
 
         private void DrawStatusEffectList()
         {
-            var width = ImGui.GetWindowContentRegionWidth() - ImGui.GetStyle().ItemSpacing.X;
+            var width = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - ImGui.GetStyle().ItemSpacing.X;
             DrawStatusSelectorTitles(width);
             ImGui.SetNextItemWidth(width);
             ImGui.InputTextWithHint("##statusFilter", "Filter...", ref _statusFilter, 64);
