@@ -41,30 +41,34 @@
     <EmbeddedResource Include="..\images\RaiseIcon" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <DalamudLibPath>$(AppData)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="DalamudPackager" Version="2.1.7" />
     <Reference Include="Dalamud">
-      <HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
+      <HintPath>$(DalamudLibPath)Dalamud.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="ImGui.NET">
-      <HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\ImGui.NET.dll</HintPath>
+      <HintPath>$(DalamudLibPath)ImGui.NET.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="ImGuiScene">
-      <HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\ImGuiScene.dll</HintPath>
+      <HintPath>$(DalamudLibPath)ImGuiScene.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="FFXIVClientStructs">
-      <HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+      <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Lumina">
-      <HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\Lumina.dll</HintPath>
+      <HintPath>$(DalamudLibPath)Lumina.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Lumina.Excel">
-      <HintPath>$(appdata)\XIVLauncher\addon\Hooks\dev\Lumina.Excel.dll</HintPath>
+      <HintPath>$(DalamudLibPath)Lumina.Excel.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
