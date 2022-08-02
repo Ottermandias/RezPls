@@ -1,0 +1,19 @@
+﻿name: RezPls
+author: Ottermandias
+description: |-
+  Easy overview about who is currently resurrecting who,
+  who is already resurrected,
+  and who has removable detrimental status effects in the world 
+  as well as in the group or alliance interface.
+punchline: Highlighting of Raises and detrimental status effects.
+repo_url: https://github.com/Ottermandias/RezPls
+tags:
+  - Resurrection
+  - Raise
+  - Debuff
+  - Condition
+  - Status Effect
+  - Cleanse
+  - Esuna
+  - Highlight
+  - Interface
