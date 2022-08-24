@@ -263,7 +263,7 @@ namespace RezPls.GUI
         private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AtkUnitBase* partyList, int idx, uint color, RectType type, bool names,
             string caster = "")
         {
-            idx = 21 - idx;
+            idx = 22 - idx;
             var nodePtr  = (AtkComponentNode*) partyList->UldManager.NodeList[idx];
             var colNode  = nodePtr->Component->UldManager.NodeList[2];
             var rectMin  = GetNodePosition(colNode) + GreenBoxPositionOffset * partyList->Scale;
