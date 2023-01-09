@@ -213,9 +213,9 @@ namespace RezPls.GUI
             var x = ImGui.GetCursorPosX();
             var y = ImGui.GetCursorPosY();
 
-            for (var i = -shadowWidth; i < shadowWidth; i++)
+            for (var i = -shadowWidth; i <= shadowWidth; i++)
             {
-                for (var j = -shadowWidth; j < shadowWidth; j++)
+                for (var j = -shadowWidth; j <= shadowWidth; j++)
                 {
                     if (i == 0 && j == 0)
                         continue;
