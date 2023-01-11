@@ -8,8 +8,8 @@ namespace RezPls.Managers
     public unsafe class HudManager : IDisposable
     {
         private const int GroupMemberOffset    = 0x0CC8;
-        private const int AllianceMemberOffset = 0x0E14;
-        private const int AllianceSizeOffset   = 0x0EB4;
+        private const int AllianceMemberOffset = 0x12C4;
+        private const int AllianceSizeOffset   = 0x1364;
         private const int GroupMemberSize      = 0x20;
         private const int GroupMemberIdOffset  = 0x18;
 
