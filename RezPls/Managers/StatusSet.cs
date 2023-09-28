@@ -83,7 +83,7 @@ namespace RezPls.Managers
             }
             else
             {
-                PluginLog.Warning($"Trying to swap Status {statusId}, but it is not a valid status.");
+                Dalamud.Log.Warning($"Trying to swap Status {statusId}, but it is not a valid status.");
             }
         }
 

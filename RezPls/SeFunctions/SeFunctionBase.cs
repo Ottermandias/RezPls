@@ -11,19 +11,19 @@ namespace RezPls.SeFunctions
         public    IntPtr Address;
         protected T?     FuncDelegate;
 
-        public SeFunctionBase(SigScanner sigScanner, int offset)
+        public SeFunctionBase(ISigScanner sigScanner, int offset)
         {
             Address = sigScanner.Module.BaseAddress + offset;
-            PluginLog.Debug($"{GetType().Name} address 0x{Address.ToInt64():X16}, baseOffset 0x{offset:X16}.");
+            Dalamud.Log.Debug($"{GetType().Name} address 0x{Address.ToInt64():X16}, baseOffset 0x{offset:X16}.");
         }
 
-        public SeFunctionBase(SigScanner sigScanner, string signature, int offset = 0)
+        public SeFunctionBase(ISigScanner sigScanner, string signature, int offset = 0)
         {
             Address = sigScanner.ScanText(signature);
             if (Address != IntPtr.Zero)
                 Address += offset;
             var baseOffset = (ulong) Address.ToInt64() - (ulong) sigScanner.Module.BaseAddress.ToInt64();
-            PluginLog.Debug($"{GetType().Name} address 0x{Address.ToInt64():X16}, baseOffset 0x{baseOffset:X16}.");
+            Dalamud.Log.Debug($"{GetType().Name} address 0x{Address.ToInt64():X16}, baseOffset 0x{baseOffset:X16}.");
         }
 
         public T? Delegate()
@@ -37,7 +37,7 @@ namespace RezPls.SeFunctions
                 return FuncDelegate;
             }
 
-            PluginLog.Error($"Trying to generate delegate for {GetType().Name}, but no pointer available.");
+            Dalamud.Log.Error($"Trying to generate delegate for {GetType().Name}, but no pointer available.");
             return null;
         }
 
@@ -53,7 +53,7 @@ namespace RezPls.SeFunctions
             }
             else
             {
-                PluginLog.Error($"Trying to call {GetType().Name}, but no pointer available.");
+                Dalamud.Log.Error($"Trying to call {GetType().Name}, but no pointer available.");
                 return null;
             }
         }
@@ -62,13 +62,13 @@ namespace RezPls.SeFunctions
         {
             if (Address != IntPtr.Zero)
             {
-                var hook = Hook<T>.FromAddress(Address, detour);
+                var hook = Dalamud.Interop.HookFromAddress(Address, detour);
                 hook.Enable();
-                PluginLog.Debug($"Hooked onto {GetType().Name} at address 0x{Address.ToInt64():X16}.");
+                Dalamud.Log.Debug($"Hooked onto {GetType().Name} at address 0x{Address.ToInt64():X16}.");
                 return hook;
             }
 
-            PluginLog.Error($"Trying to create Hook for {GetType().Name}, but no pointer available.");
+            Dalamud.Log.Error($"Trying to create Hook for {GetType().Name}, but no pointer available.");
             return null;
         }
     }

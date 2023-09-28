@@ -124,7 +124,7 @@ namespace RezPls.Managers
         private void UpdatePartyHook(IntPtr hudAgent)
         {
             _hudAgentPtr = hudAgent;
-            PluginLog.LogVerbose($"Obtained HUD agent at address 0x{_hudAgentPtr.ToInt64():X16}.");
+            Dalamud.Log.Verbose($"Obtained HUD agent at address 0x{_hudAgentPtr.ToInt64():X16}.");
             _updatePartyHook.Original(hudAgent);
             _updatePartyHook.Disable();
             _updatePartyHook.Dispose();

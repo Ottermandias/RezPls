@@ -60,7 +60,7 @@ public class ActorWatcher : IDisposable
         _statusSet   = statusSet;
         _territories = Dalamud.GameData.GetExcelSheet<TerritoryType>()!;
 
-        CheckPvP(null!, Dalamud.ClientState.TerritoryType);
+        CheckPvP(Dalamud.ClientState.TerritoryType);
     }
 
     public void Enable()
@@ -88,7 +88,7 @@ public class ActorWatcher : IDisposable
     public void Dispose()
         => Disable();
 
-    private void CheckPvP(object? _, ushort territoryId)
+    private void CheckPvP(ushort territoryId)
     {
         var row = _territories.GetRow(territoryId);
         _outsidePvP = !(row?.IsPvpZone ?? false);
@@ -105,8 +105,8 @@ public class ActorWatcher : IDisposable
 
     private static unsafe (uint, uint) GetCurrentCast(BattleChara player)
     {
-        var battleChara = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
-        var cast        = battleChara->SpellCastInfo;
+        var     battleChara = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
+        ref var cast        = ref *battleChara->GetCastInfo;
         if (cast.ActionType != ActionType.Spell)
             return (0, 0);
 
@@ -150,7 +150,7 @@ public class ActorWatcher : IDisposable
     private unsafe CastType HasStatus(BattleChara player)
     {
         var battleChar = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
-        var status     = (Status*)battleChar->StatusManager.Status;
+        var status     = (Status*)battleChar->GetStatusManager->Status;
         for (var last = status + 30; status < last; ++status)
         {
             switch (status->StatusID)
@@ -182,8 +182,7 @@ public class ActorWatcher : IDisposable
                 ActorPositions[actorId] = player.Position;
                 if (HasStatus(player) == CastType.Raise)
                     RezList[actorId] = new ActorState(0, CastType.Raise, false);
-                if (!ActorNames.ContainsKey(actorId))
-                    ActorNames.Add(actorId, player.Name.TextValue);
+                ActorNames.TryAdd(actorId, player.Name.TextValue);
             }
             else
             {
@@ -201,30 +200,27 @@ public class ActorWatcher : IDisposable
                     ActorPositions[actorId] = player.Position;
                 }
 
-                if (!ActorNames.ContainsKey(actorId))
-                    ActorNames.Add(actorId, player.Name.TextValue);
+                ActorNames.TryAdd(actorId, player.Name.TextValue);
                 if (i == 0)
                     PlayerRez = (castTarget, new ActorState(actorId, castType, false));
 
-
-                if (castType == CastType.Raise
-                 && (!RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
-                    RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
+                RezList[castTarget] = castType switch
+                {
+                    CastType.Raise when !RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster =>
+                        RezList.TryGetValue(castTarget, out var state)
+                            ? state.SetCasting(actorId, castType)
+                            : new ActorState(actorId, castType, false),
+                    CastType.Dispel => RezList.TryGetValue(castTarget, out var state)
                         ? state.SetCasting(actorId, castType)
-                        : new ActorState(actorId, castType, false);
-                if (castType == CastType.Dispel)
-                    RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
-                        ? state.SetCasting(actorId, castType)
-                        : new ActorState(actorId, castType, false);
+                        : new ActorState(actorId, castType, false),
+                    _ => RezList[castTarget],
+                };
             }
         }
     }
 
     private void ActorNamesAdd(GameObject actor)
-    {
-        if (!ActorNames.TryGetValue(actor.ObjectId, out var name))
-            ActorNames[actor.ObjectId] = actor.Name.ToString();
-    }
+        => ActorNames.TryAdd(actor.ObjectId, actor.Name.ToString());
 
     private unsafe void HandleTestMode()
     {
