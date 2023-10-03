@@ -7,7 +7,6 @@ description: |-
   as well as in the group or alliance interface.
 punchline: Highlighting of Raises and detrimental status effects.
 repo_url: https://github.com/Ottermandias/RezPls
-dalamud_api_level: 9
 tags:
   - Resurrection
   - Raise
