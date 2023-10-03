@@ -107,7 +107,7 @@ public class ActorWatcher : IDisposable
     {
         var     battleChara = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
         ref var cast        = ref *battleChara->GetCastInfo;
-        if (cast.ActionType != ActionType.Spell)
+        if (cast.ActionType != ActionType.Action)
             return (0, 0);
 
         return (cast.ActionID, cast.CastTargetID);

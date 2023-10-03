@@ -102,7 +102,6 @@ public class Overlay : IDisposable
     public void Dispose()
     {
         Disable();
-        _hudManager.Dispose();
         _raiseIcon?.Dispose();
         _dispelIcon?.Dispose();
     }
