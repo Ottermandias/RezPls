@@ -204,17 +204,15 @@ public class ActorWatcher : IDisposable
                 if (i == 0)
                     PlayerRez = (castTarget, new ActorState(actorId, castType, false));
 
-                RezList[castTarget] = castType switch
-                {
-                    CastType.Raise when !RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster =>
-                        RezList.TryGetValue(castTarget, out var state)
-                            ? state.SetCasting(actorId, castType)
-                            : new ActorState(actorId, castType, false),
-                    CastType.Dispel => RezList.TryGetValue(castTarget, out var state)
+                if (castType == CastType.Raise
+                 && (!RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
+                    RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
                         ? state.SetCasting(actorId, castType)
-                        : new ActorState(actorId, castType, false),
-                    _ => RezList[castTarget],
-                };
+                        : new ActorState(actorId, castType, false);
+                if (castType == CastType.Dispel)
+                    RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
+                        ? state.SetCasting(actorId, castType)
+                        : new ActorState(actorId, castType, false);
             }
         }
     }
