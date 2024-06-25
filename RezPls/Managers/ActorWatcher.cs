@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
 using RezPls.Enums;
-using Status = FFXIVClientStructs.FFXIV.Client.Game.Status;
+using GameObject = Dalamud.Game.ClientState.Objects.Types.GameObject;
+using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
 namespace RezPls.Managers;
 
@@ -19,23 +20,16 @@ public enum CastType : byte
     Dispel,
 };
 
-public readonly struct ActorState
+public readonly struct ActorState(ulong caster, CastType type, bool hasStatus)
 {
-    public readonly uint     Caster;
-    public readonly CastType Type;
-    public readonly bool     HasStatus;
-
-    public ActorState(uint caster, CastType type, bool hasStatus)
-    {
-        Caster    = caster;
-        Type      = type;
-        HasStatus = hasStatus;
-    }
+    public readonly ulong    Caster    = caster;
+    public readonly CastType Type      = type;
+    public readonly bool     HasStatus = hasStatus;
 
     public ActorState SetHasStatus(bool hasStatus)
         => new(Caster, Type, hasStatus);
 
-    public ActorState SetCasting(uint target, CastType type)
+    public ActorState SetCasting(ulong target, CastType type)
         => new(target, type, HasStatus);
 
     public static ActorState Nothing = new(0, CastType.None, false);
@@ -50,10 +44,10 @@ public class ActorWatcher : IDisposable
     private const    int                       ActorTablePlayerLength = 200;
     private readonly ExcelSheet<TerritoryType> _territories;
 
-    public readonly Dictionary<uint, ActorState> RezList        = new(128);
-    public readonly Dictionary<uint, string>     ActorNames     = new();
-    public readonly Dictionary<uint, Vector3>    ActorPositions = new();
-    public          (uint, ActorState)           PlayerRez      = (0, ActorState.Nothing);
+    public readonly Dictionary<ulong, ActorState> RezList        = new(128);
+    public readonly Dictionary<ulong, string>     ActorNames     = new();
+    public readonly Dictionary<ulong, Vector3>    ActorPositions = new();
+    public          (ulong, ActorState)           PlayerRez      = (0, ActorState.Nothing);
 
     public ActorWatcher(StatusSet statusSet)
     {
@@ -103,14 +97,14 @@ public class ActorWatcher : IDisposable
         return (PlayerJob(player), player.Level);
     }
 
-    private static unsafe (uint, uint) GetCurrentCast(BattleChara player)
+    private static unsafe (uint, GameObjectId) GetCurrentCast(BattleChara player)
     {
         var     battleChara = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
-        ref var cast        = ref *battleChara->GetCastInfo;
+        ref var cast        = ref *battleChara->GetCastInfo();
         if (cast.ActionType != ActionType.Action)
             return (0, 0);
 
-        return (cast.ActionID, cast.CastTargetID);
+        return (cast.ActionId, cast.TargetId);
     }
 
     private static CastType GetCastType(uint castId)
@@ -150,15 +144,15 @@ public class ActorWatcher : IDisposable
     private unsafe CastType HasStatus(BattleChara player)
     {
         var battleChar = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
-        var status     = (Status*)battleChar->GetStatusManager->Status;
-        for (var last = status + 30; status < last; ++status)
+        var statuses   = battleChar->GetStatusManager()->Status;
+        foreach (ref var status in statuses)
         {
-            switch (status->StatusID)
+            switch (status.StatusId)
             {
                 case 148 or 1140: return CastType.Raise;
                 case 0:           continue;
                 default:
-                    if (_statusSet.IsEnabled(status->StatusID))
+                    if (_statusSet.IsEnabled(status.StatusId))
                         return CastType.Dispel;
 
                     break;
@@ -176,7 +170,7 @@ public class ActorWatcher : IDisposable
             if (actor is not PlayerCharacter player)
                 continue;
 
-            var actorId = player.ObjectId;
+            var actorId = player.GameObjectId;
             if (IsDead(player))
             {
                 ActorPositions[actorId] = player.Position;
@@ -218,7 +212,7 @@ public class ActorWatcher : IDisposable
     }
 
     private void ActorNamesAdd(GameObject actor)
-        => ActorNames.TryAdd(actor.ObjectId, actor.Name.ToString());
+        => ActorNames.TryAdd(actor.GameObjectId, actor.Name.ToString());
 
     private unsafe void HandleTestMode()
     {
@@ -227,33 +221,33 @@ public class ActorWatcher : IDisposable
             return;
 
         ActorNamesAdd(p);
-        ActorPositions[p.ObjectId] = p.Position;
+        ActorPositions[p.GameObjectId] = p.Position;
 
         var t         = Dalamud.Targets.Target ?? p;
-        var tObjectId = Dalamud.Targets.Target?.ObjectId ?? 10;
+        var tObjectId = Dalamud.Targets.Target?.GameObjectId ?? 10;
         switch (TestMode)
         {
             case 1:
-                RezList[p.ObjectId] = new ActorState(0, CastType.Raise, false);
+                RezList[p.GameObjectId] = new ActorState(0, CastType.Raise, false);
                 return;
             case 2:
-                RezList[p.ObjectId] = new ActorState(t.ObjectId, CastType.Raise, false);
+                RezList[p.GameObjectId] = new ActorState(t.GameObjectId, CastType.Raise, false);
                 ActorNamesAdd(t);
                 return;
             case 3:
-                RezList[p.ObjectId] = new ActorState(tObjectId, CastType.Raise, false);
-                PlayerRez           = (p.ObjectId, new ActorState(p.ObjectId, CastType.Raise, false));
+                RezList[p.GameObjectId] = new ActorState(tObjectId, CastType.Raise, false);
+                PlayerRez               = (p.GameObjectId, new ActorState(p.GameObjectId, CastType.Raise, false));
                 return;
             case 4:
-                RezList[p.ObjectId] = new ActorState(0, CastType.None, true);
+                RezList[p.GameObjectId] = new ActorState(0, CastType.None, true);
                 return;
             case 5:
-                RezList[p.ObjectId] = new ActorState(t.ObjectId, CastType.Dispel, true);
+                RezList[p.GameObjectId] = new ActorState(t.GameObjectId, CastType.Dispel, true);
                 ActorNamesAdd(t);
                 return;
             case 6:
-                RezList[p.ObjectId] = new ActorState(tObjectId, CastType.Dispel, false);
-                PlayerRez           = (p.ObjectId, new ActorState(p.ObjectId, CastType.Raise, true));
+                RezList[p.GameObjectId] = new ActorState(tObjectId, CastType.Dispel, false);
+                PlayerRez               = (p.GameObjectId, new ActorState(p.GameObjectId, CastType.Raise, true));
                 return;
         }
     }

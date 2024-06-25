@@ -13,7 +13,7 @@ public unsafe class HudManager
     private static uint GetIdPvP(AgentHUD* agent, int idx)
     {
         if (idx < 4)
-            return agent->PartyMemberListSpan[idx].ObjectId;
+            return agent->PartyMembers[idx].EntityId;
 
         idx = ((idx >> 2) << 3) + (idx & 0b11);
         return agent->RaidMemberIds[idx];
@@ -21,7 +21,7 @@ public unsafe class HudManager
 
     private static uint GetId(AgentHUD* agent, int idx)
         => idx < 8
-            ? agent->PartyMemberListSpan[idx].ObjectId
+            ? agent->PartyMembers[idx].EntityId
             : agent->RaidMemberIds[idx - 8];
 
     public int GroupSize
@@ -36,7 +36,7 @@ public unsafe class HudManager
     public bool IsGroup
         => GroupSize == 0;
 
-    public (int groupIdx, int idx)? FindGroupMemberById(uint actorId)
+    public (int groupIdx, int idx)? FindGroupMemberById(ulong actorId)
     {
         if (!TryAgent(out var agent))
             return null;

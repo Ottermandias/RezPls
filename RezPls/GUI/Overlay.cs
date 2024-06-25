@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Numerics;
 using System.Reflection;
-using Dalamud.Interface.Internal;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
@@ -13,22 +12,21 @@ using RezPls.Managers;
 
 namespace RezPls.GUI;
 
-public class Overlay : IDisposable
+public class Overlay(ActorWatcher actorWatcher) : IDisposable
 {
-    private readonly HudManager   _hudManager;
-    private readonly ActorWatcher _actorWatcher;
+    private readonly HudManager _hudManager = new();
 
-    private IReadOnlyDictionary<uint, ActorState> Resurrections
-        => _actorWatcher.RezList;
+    private IReadOnlyDictionary<ulong, ActorState> Resurrections
+        => actorWatcher.RezList;
 
-    private IReadOnlyDictionary<uint, string> Names
-        => _actorWatcher.ActorNames;
+    private IReadOnlyDictionary<ulong, string> Names
+        => actorWatcher.ActorNames;
 
-    private IReadOnlyDictionary<uint, Vector3> Positions
-        => _actorWatcher.ActorPositions;
+    private IReadOnlyDictionary<ulong, Vector3> Positions
+        => actorWatcher.ActorPositions;
 
-    private (uint, ActorState) PlayerRez
-        => _actorWatcher.PlayerRez;
+    private (ulong, ActorState) PlayerRez
+        => actorWatcher.PlayerRez;
 
     private bool _enabled;
 
@@ -50,60 +48,22 @@ public class Overlay : IDisposable
         Dalamud.PluginInterface.UiBuilder.Draw -= Draw;
     }
 
-    private readonly        IDalamudTextureWrap? _raiseIcon;
-    private readonly        IDalamudTextureWrap? _dispelIcon;
-    private static readonly Vector4              BlackColor = new(0, 0, 0, 1);
-    private static readonly Vector4              WhiteColor = new(1, 1, 1, 1);
+    private readonly ISharedImmediateTexture? _raiseIcon =
+        Dalamud.Textures.GetFromManifestResource(Assembly.GetExecutingAssembly(), "RezPls.RaiseIcon");
+
+    private readonly        ISharedImmediateTexture? _dispelIcon = Dalamud.Textures.GetFromGameIcon(15019);
+    private static readonly Vector4                  BlackColor  = new(0, 0, 0, 1);
+    private static readonly Vector4                  WhiteColor  = new(1, 1, 1, 1);
 
     private bool _drawRaises  = true;
     private bool _drawDispels = true;
 
-    private static IDalamudTextureWrap? BuildRaiseIcon()
-    {
-        const int raiseIconId = 10406;
-
-        var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("RezPls.RaiseIcon");
-        if (resource != null)
-        {
-            using MemoryStream ms = new();
-            resource.CopyTo(ms);
-            var bytes = ms.ToArray();
-            try
-            {
-                var wrap = Dalamud.PluginInterface.UiBuilder.LoadImageRaw(bytes, 48, 64, 4);
-                if (wrap != null)
-                    return wrap;
-            }
-            catch
-            {
-                // ignored
-            }
-        }
-
-        return Dalamud.Textures.GetIcon(raiseIconId);
-    }
-
     private static readonly Vector2 DefaultIconSize = new(48, 64);
 
-    private static IDalamudTextureWrap? BuildDispelIcon()
-    {
-        const int dispelIconId = 15019;
-        return Dalamud.Textures.GetIcon(dispelIconId);
-    }
-
-    public Overlay(ActorWatcher actorWatcher)
-    {
-        _actorWatcher = actorWatcher;
-        _hudManager   = new HudManager();
-        _raiseIcon    = BuildRaiseIcon();
-        _dispelIcon   = BuildDispelIcon();
-    }
 
     public void Dispose()
     {
         Disable();
-        _raiseIcon?.Dispose();
-        _dispelIcon?.Dispose();
     }
 
     private (CastType, string, bool, bool) GetText(string name, ActorState state)
@@ -145,7 +105,8 @@ public class Overlay : IDisposable
             var scaledIconSize = DefaultIconSize * RezPls.Config.IconScale * ImGui.GetIO().FontGlobalScale;
 
             ImGui.SetCursorPos(new Vector2(pos.X - scaledIconSize.X / 2f, pos.Y - scaledIconSize.Y) - ImGui.GetMainViewport().Pos);
-            ImGui.Image(icon.ImGuiHandle, scaledIconSize);
+            if (icon.TryGetWrap(out var wrap, out _))
+                ImGui.Image(wrap.ImGuiHandle, scaledIconSize);
         }
 
         if (drawText)
@@ -282,7 +243,7 @@ public class Overlay : IDisposable
     }
 
 
-    private string GetActorName(CastType type, uint corpse, uint caster)
+    private string GetActorName(CastType type, ulong corpse, ulong caster)
     {
         if (type == CastType.Dispel)
             return Names.TryGetValue(caster, out var name) ? name : "Unknown";
@@ -294,10 +255,10 @@ public class Overlay : IDisposable
         return Names.TryGetValue(caster, out var name2) ? name2 : "Unknown";
     }
 
-    private Vector3? GetActorPosition(uint corpse)
+    private Vector3? GetActorPosition(ulong corpse)
         => Positions.TryGetValue(corpse, out var pos) ? pos : null;
 
-    private uint GetColor(uint corpse, ActorState state)
+    private uint GetColor(ulong corpse, ActorState state)
     {
         if (_drawDispels)
         {
@@ -347,7 +308,7 @@ public class Overlay : IDisposable
 
         var anyParty = drawParty || drawAlliance1 || drawAlliance2;
 
-        void DrawWhichRect(uint corpse, ActorState state)
+        void DrawWhichRect(ulong corpse, ActorState state)
         {
             if (!_drawRaises && state.Type == CastType.Raise && !state.HasStatus)
                 return;
@@ -409,7 +370,7 @@ public class Overlay : IDisposable
         _drawDispels = RezPls.Config.EnabledDispel;
         if (RezPls.Config.RestrictedJobs || RezPls.Config.RestrictedJobsDispel)
         {
-            var (job, level) = _actorWatcher.CurrentPlayerJob();
+            var (job, level) = actorWatcher.CurrentPlayerJob();
 
             if (!job.CanRaise() || job == Job.RDM && level < 64)
                 _drawRaises &= !RezPls.Config.RestrictedJobs;
