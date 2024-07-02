@@ -20,9 +20,9 @@ namespace RezPls
         private readonly Overlay      _overlay;
         private readonly Interface    _interface;
 
-        public StatusSet StatusSet;
+        public readonly StatusSet StatusSet;
 
-        public RezPls(DalamudPluginInterface pluginInterface)
+        public RezPls(IDalamudPluginInterface pluginInterface)
         {
             Dalamud.Initialize(pluginInterface);
             Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";

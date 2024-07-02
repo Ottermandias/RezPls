@@ -4,11 +4,11 @@ using System.Numerics;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
 using RezPls.Enums;
-using GameObject = Dalamud.Game.ClientState.Objects.Types.GameObject;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
 namespace RezPls.Managers;
@@ -97,9 +97,9 @@ public class ActorWatcher : IDisposable
         return (PlayerJob(player), player.Level);
     }
 
-    private static unsafe (uint, GameObjectId) GetCurrentCast(BattleChara player)
+    private static unsafe (uint, GameObjectId) GetCurrentCast(IBattleChara player)
     {
-        var     battleChara = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
+        var     battleChara = (BattleChara*)player.Address;
         ref var cast        = ref *battleChara->GetCastInfo();
         if (cast.ActionType != ActionType.Action)
             return (0, 0);
@@ -132,18 +132,18 @@ public class ActorWatcher : IDisposable
         };
     }
 
-    private static bool IsPlayer(GameObject actor)
+    private static bool IsPlayer(IGameObject actor)
         => actor.ObjectKind == ObjectKind.Player;
 
-    private static bool IsDead(Character player)
+    private static bool IsDead(ICharacter player)
         => player.CurrentHp <= 0;
 
-    private static Job PlayerJob(Character player)
+    private static Job PlayerJob(ICharacter player)
         => (Job)player.ClassJob.Id;
 
-    private unsafe CastType HasStatus(BattleChara player)
+    private unsafe CastType HasStatus(IBattleChara player)
     {
-        var battleChar = (FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)player.Address;
+        var battleChar = (BattleChara*)player.Address;
         var statuses   = battleChar->GetStatusManager()->Status;
         foreach (ref var status in statuses)
         {
@@ -167,7 +167,7 @@ public class ActorWatcher : IDisposable
         for (var i = 0; i < ActorTablePlayerLength; i += 2)
         {
             var actor = Dalamud.Objects[i];
-            if (actor is not PlayerCharacter player)
+            if (actor is not IPlayerCharacter player)
                 continue;
 
             var actorId = player.GameObjectId;
@@ -211,8 +211,8 @@ public class ActorWatcher : IDisposable
         }
     }
 
-    private void ActorNamesAdd(GameObject actor)
-        => ActorNames.TryAdd(actor.GameObjectId, actor.Name.ToString());
+    private void ActorNamesAdd(IGameObject actor)
+        => ActorNames.TryAdd(actor.EntityId, actor.Name.ToString());
 
     private unsafe void HandleTestMode()
     {
