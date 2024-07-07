@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Reflection;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using RezPls.Enums;
@@ -204,12 +205,10 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
         }
     }
 
-    private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AtkUnitBase* partyList, int idx, uint color, RectType type, bool names,
+    private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AddonPartyList* partyList, int idx, uint color, RectType type, bool names,
         string caster = "")
     {
-        idx = 22 - idx;
-        var nodePtr  = (AtkComponentNode*)partyList->UldManager.NodeList[idx];
-        var colNode  = nodePtr->Component->UldManager.NodeList[2];
+        var colNode  = (AtkResNode*)partyList->PartyMembers[idx].TargetGlow;
         var rectMin  = GetNodePosition(colNode) + GreenBoxPositionOffset * partyList->Scale;
         var rectSize = (new Vector2(colNode->Width, colNode->Height) - GreenBoxSizeOffset) * partyList->Scale;
 
@@ -297,7 +296,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
         if (!_drawRaises && !_drawDispels)
             return;
 
-        var party     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_PartyList");
+        var party     = (AddonPartyList*)Dalamud.GameGui.GetAddonByName("_PartyList");
         var drawParty = RezPls.Config.ShowGroupFrame && party != null && party->IsVisible;
 
         var alliance1     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList1");
