@@ -208,7 +208,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
     private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AddonPartyList* partyList, int idx, uint color, RectType type, bool names,
         string caster = "")
     {
-        var colNode  = (AtkResNode*)partyList->PartyMembers[idx].PartyMemberComponent->OwnerNode;
+        var colNode  = (AtkResNode*)partyList->PartyMembers[idx].TargetGlow;
         var rectMin  = GetNodePosition(colNode) + GreenBoxPositionOffset * partyList->Scale;
         var rectSize = (new Vector2(colNode->Width, colNode->Height) - GreenBoxSizeOffset) * partyList->Scale;
 
