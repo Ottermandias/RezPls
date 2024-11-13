@@ -369,7 +369,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
         _drawDispels = RezPls.Config.EnabledDispel;
         if (RezPls.Config.RestrictedJobs || RezPls.Config.RestrictedJobsDispel)
         {
-            var (job, level) = actorWatcher.CurrentPlayerJob();
+            var (job, level) = ActorWatcher.CurrentPlayerJob();
 
             if (!job.CanRaise() || job == Job.RDM && level < 64)
                 _drawRaises &= !RezPls.Config.RestrictedJobs;

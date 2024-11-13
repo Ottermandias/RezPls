@@ -7,7 +7,7 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using Lumina.Excel;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using RezPls.Enums;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
@@ -52,7 +52,7 @@ public class ActorWatcher : IDisposable
     public ActorWatcher(StatusSet statusSet)
     {
         _statusSet   = statusSet;
-        _territories = Dalamud.GameData.GetExcelSheet<TerritoryType>()!;
+        _territories = Dalamud.GameData.GetExcelSheet<TerritoryType>();
 
         CheckPvP(Dalamud.ClientState.TerritoryType);
     }
@@ -83,12 +83,9 @@ public class ActorWatcher : IDisposable
         => Disable();
 
     private void CheckPvP(ushort territoryId)
-    {
-        var row = _territories.GetRow(territoryId);
-        _outsidePvP = !(row?.IsPvpZone ?? false);
-    }
+        => _outsidePvP = _territories.TryGetRow(territoryId, out var row) && row.IsPvpZone;
 
-    public (Job job, byte level) CurrentPlayerJob()
+    public static (Job job, byte level) CurrentPlayerJob()
     {
         var player = Dalamud.ClientState.LocalPlayer;
         if (player == null || !IsPlayer(player))
@@ -97,14 +94,13 @@ public class ActorWatcher : IDisposable
         return (PlayerJob(player), player.Level);
     }
 
-    private static unsafe (uint, GameObjectId) GetCurrentCast(IBattleChara player)
+    private static unsafe (uint, GameObjectId) GetCurrentCast(IGameObject player)
     {
         var     battleChara = (BattleChara*)player.Address;
         ref var cast        = ref *battleChara->GetCastInfo();
-        if (cast.ActionType != ActionType.Action)
-            return (0, 0);
-
-        return (cast.ActionId, cast.TargetId);
+        return cast.ActionType != ActionType.Action 
+            ? ((uint, GameObjectId))(0, 0) 
+            : (cast.ActionId, cast.TargetId);
     }
 
     private static CastType GetCastType(uint castId)
@@ -139,9 +135,9 @@ public class ActorWatcher : IDisposable
         => player.CurrentHp <= 0;
 
     private static Job PlayerJob(ICharacter player)
-        => (Job)player.ClassJob.Id;
+        => (Job)player.ClassJob.RowId;
 
-    private unsafe CastType HasStatus(IBattleChara player)
+    private unsafe CastType HasStatus(IGameObject player)
     {
         var battleChar = (BattleChara*)player.Address;
         var statuses   = battleChar->GetStatusManager()->Status;
@@ -214,7 +210,7 @@ public class ActorWatcher : IDisposable
     private void ActorNamesAdd(IGameObject actor)
         => ActorNames.TryAdd(actor.EntityId, actor.Name.ToString());
 
-    private unsafe void HandleTestMode()
+    private void HandleTestMode()
     {
         var p = Dalamud.ClientState.LocalPlayer;
         if (p == null)

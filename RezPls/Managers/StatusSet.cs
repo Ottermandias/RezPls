@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Dalamud.Logging;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 
 namespace RezPls.Managers
 {
@@ -22,7 +21,7 @@ namespace RezPls.Managers
         public StatusSet()
         {
             var sheet = Dalamud.GameData.GetExcelSheet<Status>();
-            _enabledStatusSet = new SortedList<ushort, (Status, string)>(sheet!.Where(s => s.CanDispel && s.Name.RawData.Length > 0)
+            _enabledStatusSet = new SortedList<ushort, (Status, string)>(sheet.Where(s => s is { CanDispel: true, Name.IsEmpty: false })
                 .ToDictionary(s => (ushort) s.RowId, s => (s, s.Name.ToString().ToLowerInvariant())));
             _disabledStatusSet = new SortedList<ushort, (Status, string)>(_enabledStatusSet.Count);
 
