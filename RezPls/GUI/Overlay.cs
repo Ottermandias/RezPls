@@ -52,7 +52,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
     private readonly ISharedImmediateTexture? _raiseIcon =
         Dalamud.Textures.GetFromManifestResource(Assembly.GetExecutingAssembly(), "RezPls.RaiseIcon");
 
-    private readonly        ISharedImmediateTexture? _dispelIcon = Dalamud.Textures.GetFromGameIcon(15019);
+    private readonly        ISharedImmediateTexture? _dispelIcon = Dalamud.Textures.GetFromGameIcon(215019);
     private static readonly Vector4                  BlackColor  = new(0, 0, 0, 1);
     private static readonly Vector4                  WhiteColor  = new(1, 1, 1, 1);
 
