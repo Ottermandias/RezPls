@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
+using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
 using RezPls.Managers;
 
@@ -382,10 +384,36 @@ public class Interface : IDisposable
                 DrawTestModeCheckBox5();
                 DrawTestModeCheckBox6();
             }
+
+            DrawDebug();
         }
         finally
         {
             ImGui.End();
+        }
+    }
+
+    [Conditional("DEBUG")]
+    private void DrawDebug()
+    {
+        if (!ImGui.CollapsingHeader("Debug"))
+            return;
+
+        ImGui.TextUnformatted($"In PVP: {Dalamud.ClientState.IsPvP}");
+        ImGui.TextUnformatted($"Test Mode: {ActorWatcher.TestMode}");
+        using (var tree = ImRaii.TreeNode("Names"))
+        {
+            if (tree)
+                foreach (var (id, name) in _plugin.ActorWatcher.ActorNames)
+                    ImRaii.TreeNode($"{name} ({id})", ImGuiTreeNodeFlags.Bullet | ImGuiTreeNodeFlags.Leaf).Dispose();
+        }
+
+        using (var tree = ImRaii.TreeNode("Casts"))
+        {
+            if (tree)
+                foreach (var (id, state) in _plugin.ActorWatcher.RezList)
+                    ImRaii.TreeNode($"{id}: {state.Type} by {state.Caster}, {(state.HasStatus ? "Has Status" : string.Empty)}",
+                        ImGuiTreeNodeFlags.Bullet | ImGuiTreeNodeFlags.Leaf).Dispose();
         }
     }
 

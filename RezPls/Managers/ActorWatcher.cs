@@ -38,7 +38,6 @@ public readonly struct ActorState(ulong caster, CastType type, bool hasStatus)
 public class ActorWatcher : IDisposable
 {
     public static    int                       TestMode;
-    private          bool                      _outsidePvP = true;
     private          bool                      _enabled;
     private readonly StatusSet                 _statusSet;
     private const    int                       ActorTablePlayerLength = 200;
@@ -53,8 +52,6 @@ public class ActorWatcher : IDisposable
     {
         _statusSet   = statusSet;
         _territories = Dalamud.GameData.GetExcelSheet<TerritoryType>();
-
-        CheckPvP(Dalamud.ClientState.TerritoryType);
     }
 
     public void Enable()
@@ -63,7 +60,6 @@ public class ActorWatcher : IDisposable
             return;
 
         Dalamud.Framework.Update             += OnFrameworkUpdate;
-        Dalamud.ClientState.TerritoryChanged += CheckPvP;
         _enabled                             =  true;
     }
 
@@ -73,7 +69,6 @@ public class ActorWatcher : IDisposable
             return;
 
         Dalamud.Framework.Update             -= OnFrameworkUpdate;
-        Dalamud.ClientState.TerritoryChanged -= CheckPvP;
         _enabled                             =  false;
         RezList.Clear();
         PlayerRez = (0, ActorState.Nothing);
@@ -81,9 +76,6 @@ public class ActorWatcher : IDisposable
 
     public void Dispose()
         => Disable();
-
-    private void CheckPvP(ushort territoryId)
-        => _outsidePvP = _territories.TryGetRow(territoryId, out var row) && row.IsPvpZone;
 
     public static (Job job, byte level) CurrentPlayerJob()
     {
@@ -120,7 +112,7 @@ public class ActorWatcher : IDisposable
             20730 => CastType.Raise,  // Lost Arise, Bozja
             12996 => CastType.Raise,  // Raise L, Eureka
             24287 => CastType.Raise,  // Egeiro
-            7568  => CastType.Dispel, // Esuna
+            7568  => CastType.Dispel, // Esuna, instant, so irrelevant
             3561  => CastType.Dispel, // The Warden's Paean, instant, so irrelevant
             18318 => CastType.Dispel, // Exuviation
 
@@ -251,7 +243,7 @@ public class ActorWatcher : IDisposable
 
     public void OnFrameworkUpdate(object _)
     {
-        if (!_outsidePvP)
+        if (Dalamud.ClientState.IsPvP)
             return;
 
         RezList.Clear();

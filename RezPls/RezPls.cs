@@ -4,69 +4,67 @@ using Dalamud.Plugin;
 using RezPls.GUI;
 using RezPls.Managers;
 
-namespace RezPls
+namespace RezPls;
+// auto-format:off
+
+public partial class RezPls : IDalamudPlugin
 {
-    // auto-format:off
+    public string Name
+        => "RezPls";
 
-    public partial class RezPls : IDalamudPlugin
+    public static string Version = "";
+
+    public static    RezPlsConfig Config { get; private set; } = null!;
+    public readonly  ActorWatcher ActorWatcher;
+    private readonly Overlay      _overlay;
+    private readonly Interface    _interface;
+
+    public readonly StatusSet StatusSet;
+
+    public RezPls(IDalamudPluginInterface pluginInterface)
     {
-        public string Name
-            => "RezPls";
+        Dalamud.Initialize(pluginInterface);
+        Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+        Config  = RezPlsConfig.Load();
 
-        public static string Version = "";
+        StatusSet    = new StatusSet();
+        ActorWatcher = new ActorWatcher(StatusSet);
+        _overlay     = new Overlay(ActorWatcher);
+        _interface   = new Interface(this);
 
-        public static    RezPlsConfig Config { get; private set; } = null!;
-        private readonly ActorWatcher _actorWatcher;
-        private readonly Overlay      _overlay;
-        private readonly Interface    _interface;
-
-        public readonly StatusSet StatusSet;
-
-        public RezPls(IDalamudPluginInterface pluginInterface)
+        if (Config.Enabled)
+            Enable();
+        else
+            Disable();
+        Dalamud.Commands.AddHandler("/rezpls", new CommandInfo(OnRezPls)
         {
-            Dalamud.Initialize(pluginInterface);
-            Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
-            Config  = RezPlsConfig.Load();
+            HelpMessage = "Open the configuration window for RezPls.",
+            ShowInHelp  = true,
+        });
+    }
 
-            StatusSet     = new StatusSet();
-            _actorWatcher = new ActorWatcher(StatusSet);
-            _overlay      = new Overlay(_actorWatcher);
-            _interface    = new Interface(this);
+    public void OnRezPls(string _, string arguments)
+    {
+        _interface!.Visible = !_interface.Visible;
+    }
 
-            if (Config.Enabled)
-                Enable();
-            else
-                Disable();
-            Dalamud.Commands.AddHandler("/rezpls", new CommandInfo(OnRezPls)
-            {
-                HelpMessage = "Open the configuration window for RezPls.",
-                ShowInHelp  = true,
-            });
-        }
+    public void Enable()
+    {
+        ActorWatcher!.Enable();
+        _overlay!.Enable();
+    }
 
-        public void OnRezPls(string _, string arguments)
-        {
-            _interface!.Visible = !_interface.Visible;
-        }
+    public void Disable()
+    {
+        ActorWatcher!.Disable();
+        _overlay!.Disable();
+    }
 
-        public void Enable()
-        {
-            _actorWatcher!.Enable();
-            _overlay!.Enable();
-        }
-
-        public void Disable()
-        {
-            _actorWatcher!.Disable();
-            _overlay!.Disable();
-        }
-
-        public void Dispose()
-        {
-            Dalamud.Commands.RemoveHandler("/rezpls");
-            _interface.Dispose();
-            _overlay.Dispose();
-            _actorWatcher.Dispose();
-        }
+    public void Dispose()
+    {
+        Dalamud.Commands.RemoveHandler("/rezpls");
+        _interface.Dispose();
+        _overlay.Dispose();
+        ActorWatcher.Dispose();
     }
 }
