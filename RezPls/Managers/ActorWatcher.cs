@@ -112,19 +112,16 @@ public class ActorWatcher : IDisposable
             20730 => CastType.Raise,  // Lost Arise, Bozja
             12996 => CastType.Raise,  // Raise L, Eureka
             24287 => CastType.Raise,  // Egeiro
+            41634 => CastType.Raise,  // Revive, Occult Crescent, instant, so irrelevant
             7568  => CastType.Dispel, // Esuna, instant, so irrelevant
             3561  => CastType.Dispel, // The Warden's Paean, instant, so irrelevant
             18318 => CastType.Dispel, // Exuviation
-
             _ => CastType.None,
         };
     }
 
     private static bool IsPlayer(IGameObject actor)
         => actor.ObjectKind == ObjectKind.Player;
-
-    private static bool IsDead(ICharacter player)
-        => player.CurrentHp <= 0;
 
     private static Job PlayerJob(ICharacter player)
         => (Job)player.ClassJob.RowId;
@@ -159,7 +156,7 @@ public class ActorWatcher : IDisposable
                 continue;
 
             var actorId = player.GameObjectId;
-            if (IsDead(player))
+            if (player.IsDead)
             {
                 ActorPositions[actorId] = player.Position;
                 if (HasStatus(player) == CastType.Raise)

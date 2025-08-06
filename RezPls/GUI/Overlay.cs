@@ -7,7 +7,7 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using RezPls.Enums;
 using RezPls.Managers;
 
@@ -107,7 +107,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
 
             ImGui.SetCursorPos(new Vector2(pos.X - scaledIconSize.X / 2f, pos.Y - scaledIconSize.Y) - ImGui.GetMainViewport().Pos);
             if (icon.TryGetWrap(out var wrap, out _))
-                ImGui.Image(wrap.ImGuiHandle, scaledIconSize);
+                ImGui.Image(wrap.Handle, scaledIconSize);
         }
 
         if (drawText)
@@ -296,13 +296,13 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
         if (!_drawRaises && !_drawDispels)
             return;
 
-        var party     = (AddonPartyList*)Dalamud.GameGui.GetAddonByName("_PartyList");
+        var party     = (AddonPartyList*)Dalamud.GameGui.GetAddonByName("_PartyList").Address;
         var drawParty = RezPls.Config.ShowGroupFrame && party != null && party->IsVisible;
 
-        var alliance1     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList1");
+        var alliance1     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList1").Address;
         var drawAlliance1 = RezPls.Config.ShowAllianceFrame && alliance1 != null && alliance1->IsVisible;
 
-        var alliance2     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList2");
+        var alliance2     = (AtkUnitBase*)Dalamud.GameGui.GetAddonByName("_AllianceList2").Address;
         var drawAlliance2 = RezPls.Config.ShowAllianceFrame && alliance2 != null && alliance2->IsVisible;
 
         var anyParty = drawParty || drawAlliance1 || drawAlliance2;
