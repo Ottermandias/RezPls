@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>RezPls</RootNamespace>
     <AssemblyName>RezPls</AssemblyName>
-    <Version>1.5.1.0</Version>
+    <Version>1.5.2.0</Version>
     <Product>RezPls</Product>
     <Copyright>Copyright © 2025</Copyright>
     <WarningLevel>4</WarningLevel>

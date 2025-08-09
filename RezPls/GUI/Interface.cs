@@ -66,6 +66,10 @@ public class Interface : IDisposable
         => DrawCheckbox("Hide Symbols on Self", "Hide the symbol and/or text drawn into the world on the player character.",
             RezPls.Config.HideSymbolsOnSelf,    e => RezPls.Config.HideSymbolsOnSelf = e);
 
+    private void DrawShowCastProgressCheckbox()
+        => DrawCheckbox("Show Cast Progress", "Show the progress of raise casts compared to the total cast time. This only works with the filled cast box styles. ",
+            RezPls.Config.ShowCastProgress,   e => RezPls.Config.ShowCastProgress = e);
+
     private void DrawEnabledRaiseCheckbox()
         => DrawCheckbox("Enable Raise Highlighting",
             "Highlight players being raised.", RezPls.Config.EnabledRaise, e => RezPls.Config.EnabledRaise = e);
@@ -351,6 +355,7 @@ public class Interface : IDisposable
 
             if (ImGui.CollapsingHeader("General Settings"))
             {
+                DrawShowCastProgressCheckbox();
                 DrawHideSymbolsOnSelfCheckbox();
                 DrawShowGroupCheckbox();
                 DrawShowAllianceCheckbox();
@@ -412,8 +417,10 @@ public class Interface : IDisposable
         {
             if (tree)
                 foreach (var (id, state) in _plugin.ActorWatcher.RezList)
+                {
                     ImRaii.TreeNode($"{id}: {state.Type} by {state.Caster}, {(state.HasStatus ? "Has Status" : string.Empty)}",
                         ImGuiTreeNodeFlags.Bullet | ImGuiTreeNodeFlags.Leaf).Dispose();
+                }
         }
     }
 

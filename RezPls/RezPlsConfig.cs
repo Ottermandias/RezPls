@@ -30,6 +30,7 @@ namespace RezPls
         public bool     ShowAllianceFrame { get; set; } = true;
         public bool     ShowGroupFrame    { get; set; } = true;
         public bool     HideSymbolsOnSelf { get; set; } = false;
+        public bool     ShowCastProgress  { get; set; } = true;
 
         public bool EnabledRaise           { get; set; } = true;
         public bool RestrictedJobs         { get; set; } = false;

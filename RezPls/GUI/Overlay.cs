@@ -180,39 +180,66 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
     private static readonly Vector2 GreenBoxSizeOffset     = new(8, 10);
     private const           float   GreenBoxEdgeRounding   = 10;
 
-    private static void DrawRect(ImDrawListPtr drawPtr, Vector2 rectMin, Vector2 rectMax, uint color, float rounding, RectType type)
+    private static void DrawRect(ImDrawListPtr drawPtr, Vector2 rectMin, Vector2 rectMax, uint color, byte percentage, float rounding,
+        RectType type)
     {
         rectMin += ImGui.GetMainViewport().Pos;
         rectMax += ImGui.GetMainViewport().Pos;
-        switch (type)
+        if (percentage >= 100)
         {
-            case RectType.Fill:
-                drawPtr.AddRectFilled(rectMin, rectMax, color, rounding);
-                break;
-            case RectType.OnlyOutline:
-                drawPtr.AddRect(rectMin, rectMax, color, rounding);
-                break;
-            case RectType.OnlyFullAlphaOutline:
-                color |= 0xFF000000;
-                drawPtr.AddRect(rectMin, rectMax, color, rounding);
-                break;
-            case RectType.FillAndFullAlphaOutline:
-                drawPtr.AddRectFilled(rectMin, rectMax, color, rounding);
-                color |= 0xFF000000;
-                drawPtr.AddRect(rectMin, rectMax, color, rounding);
-                break;
-            default: throw new InvalidEnumArgumentException();
+            switch (type)
+            {
+                case RectType.Fill:        drawPtr.AddRectFilled(rectMin, rectMax, color, rounding); break;
+                case RectType.OnlyOutline: drawPtr.AddRect(rectMin, rectMax, color, rounding); break;
+                case RectType.OnlyFullAlphaOutline:
+                    color |= 0xFF000000;
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding);
+                    break;
+                case RectType.FillAndFullAlphaOutline:
+                    drawPtr.AddRectFilled(rectMin, rectMax, color, rounding);
+                    color |= 0xFF000000;
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding);
+                    break;
+                default: throw new InvalidEnumArgumentException();
+            }
+        }
+        else
+        {
+            var width        = rectMax.X - rectMin.X;
+            var halfColor    = ((color / 2) & 0xFF000000) | (color & 0x00FFFFFF);
+            var otherRectMax =  rectMax with { X = rectMin.X + percentage / 100f * width };
+            var otherRectMin = new Vector2(otherRectMax.X, rectMin.Y);
+            switch (type)
+            {
+                case RectType.Fill:        
+                    drawPtr.AddRectFilled(rectMin,      otherRectMax, color,     rounding, ImDrawFlags.RoundCornersLeft);
+                    drawPtr.AddRectFilled(otherRectMin, rectMax,      halfColor, rounding, ImDrawFlags.RoundCornersRight); break;
+                case RectType.OnlyOutline: 
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding); 
+                    break;
+                case RectType.OnlyFullAlphaOutline:
+                    color |= 0xFF000000;
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding);
+                    break;
+                case RectType.FillAndFullAlphaOutline:
+                    drawPtr.AddRectFilled(rectMin, otherRectMax, color, rounding, ImDrawFlags.RoundCornersLeft);
+                    drawPtr.AddRectFilled(otherRectMin, rectMax,      halfColor, rounding, ImDrawFlags.RoundCornersRight);
+                    color |= 0xFF000000;
+                    drawPtr.AddRect(rectMin, rectMax, color, rounding);
+                    break;
+                default: throw new InvalidEnumArgumentException();
+            }
         }
     }
 
     private static unsafe void DrawPartyRect(ImDrawListPtr drawPtr, AddonPartyList* partyList, int idx, uint color, RectType type, bool names,
-        string caster = "")
+        byte progress, string caster = "")
     {
         var colNode  = (AtkResNode*)partyList->PartyMembers[idx].TargetGlow;
         var rectMin  = GetNodePosition(colNode) + GreenBoxPositionOffset * partyList->Scale;
         var rectSize = (new Vector2(colNode->Width, colNode->Height) - GreenBoxSizeOffset) * partyList->Scale;
 
-        DrawRect(drawPtr, rectMin, rectMin + rectSize, color, GreenBoxEdgeRounding * partyList->Scale, type);
+        DrawRect(drawPtr, rectMin, rectMin + rectSize, color, progress, GreenBoxEdgeRounding * partyList->Scale, type);
         if (!names || caster.Length <= 0)
             return;
 
@@ -222,8 +249,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
     }
 
     private static unsafe void DrawAllianceRect(ImDrawListPtr drawPtr, AtkUnitBase* allianceList, int idx, uint color, RectType type,
-        bool names,
-        string caster = "")
+        bool names, byte progress, string caster = "")
     {
         idx = 9 - idx;
         var nodePtr  = allianceList->UldManager.NodeList[idx];
@@ -232,7 +258,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
         var rectMin  = GetNodePosition(gridNode) + GreenBoxPositionOffset * allianceList->Scale;
         var rectSize = (new Vector2(gridNode->Width, gridNode->Height) - GreenBoxSizeOffset) * allianceList->Scale;
 
-        DrawRect(drawPtr, rectMin, rectMin + rectSize, color, GreenBoxEdgeRounding * allianceList->Scale, type);
+        DrawRect(drawPtr, rectMin, rectMin + rectSize, color, progress, GreenBoxEdgeRounding * allianceList->Scale, type);
         if (!names || caster.Length <= 0)
             return;
 
@@ -245,13 +271,13 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
     private string GetActorName(CastType type, ulong corpse, ulong caster)
     {
         if (type == CastType.Dispel)
-            return Names.TryGetValue(caster, out var name) ? name : "Unknown";
+            return Names.GetValueOrDefault(caster, "Unknown");
         if (corpse == caster)
             return "LIMIT BREAK";
         if (caster == 0)
             return string.Empty;
 
-        return Names.TryGetValue(caster, out var name2) ? name2 : "Unknown";
+        return Names.GetValueOrDefault(caster, "Unknown");
     }
 
     private Vector3? GetActorPosition(ulong corpse)
@@ -291,7 +317,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
         return 0;
     }
 
-    public unsafe void DrawOnPartyFrames(ImDrawListPtr drawPtr)
+    private unsafe void DrawOnPartyFrames(ImDrawListPtr drawPtr)
     {
         if (!_drawRaises && !_drawDispels)
             return;
@@ -307,9 +333,13 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
 
         var anyParty = drawParty || drawAlliance1 || drawAlliance2;
 
+        foreach (var (actorId, state) in Resurrections)
+            DrawWhichRect(actorId, state);
+        return;
+
         void DrawWhichRect(ulong corpse, ActorState state)
         {
-            if (!_drawRaises && state.Type == CastType.Raise && !state.HasStatus)
+            if (!_drawRaises && state is { Type: CastType.Raise, HasStatus: false })
                 return;
             if (!_drawDispels && state.Type != CastType.Raise)
                 return;
@@ -322,23 +352,23 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
                 {
                     var color = GetColor(corpse, state);
                     if (color != 0)
-                        switch (@group.Value.groupIdx)
+                        switch (group.Value.groupIdx)
                         {
                             case 0:
                                 if (drawParty)
-                                    DrawPartyRect(drawPtr,             party, @group.Value.idx, color, RezPls.Config.RectType,
-                                        RezPls.Config.ShowCasterNames, name);
+                                    DrawPartyRect(drawPtr,             party, group.Value.idx, color, RezPls.Config.RectType,
+                                        RezPls.Config.ShowCasterNames, RezPls.Config.ShowCastProgress ? state.Percentage : (byte)100, name);
                                 break;
                             case 1:
                                 if (drawAlliance1)
-                                    DrawAllianceRect(drawPtr, alliance1, @group.Value.idx, color, RezPls.Config.RectType,
-                                        RezPls.Config.ShowCasterNames,
+                                    DrawAllianceRect(drawPtr,          alliance1, group.Value.idx, color, RezPls.Config.RectType,
+                                        RezPls.Config.ShowCasterNames, RezPls.Config.ShowCastProgress ? state.Percentage : (byte)100,
                                         name);
                                 break;
                             case 2:
                                 if (drawAlliance2)
-                                    DrawAllianceRect(drawPtr, alliance2, @group.Value.idx, color, RezPls.Config.RectType,
-                                        RezPls.Config.ShowCasterNames,
+                                    DrawAllianceRect(drawPtr,          alliance2, group.Value.idx, color, RezPls.Config.RectType,
+                                        RezPls.Config.ShowCasterNames, RezPls.Config.ShowCastProgress ? state.Percentage : (byte)100,
                                         name);
                                 break;
                         }
@@ -355,12 +385,9 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
             if (pos != null && Dalamud.GameGui.WorldToScreen(pos.Value, out var screenPos))
                 DrawInWorld(screenPos, name, state);
         }
-
-        foreach (var (actorId, state) in Resurrections)
-            DrawWhichRect(actorId, state);
     }
 
-    public void Draw()
+    private void Draw()
     {
         if (Resurrections.Count == 0)
             return;

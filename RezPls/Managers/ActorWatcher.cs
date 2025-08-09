@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -20,19 +21,20 @@ public enum CastType : byte
     Dispel,
 };
 
-public readonly struct ActorState(ulong caster, CastType type, bool hasStatus)
+public readonly struct ActorState(ulong caster, CastType type, bool hasStatus, byte percentage)
 {
-    public readonly ulong    Caster    = caster;
-    public readonly CastType Type      = type;
-    public readonly bool     HasStatus = hasStatus;
+    public readonly ulong    Caster     = caster;
+    public readonly CastType Type       = type;
+    public readonly byte     Percentage = percentage;
+    public readonly bool     HasStatus  = hasStatus;
 
     public ActorState SetHasStatus(bool hasStatus)
-        => new(Caster, Type, hasStatus);
+        => new(Caster, Type, hasStatus, 100);
 
-    public ActorState SetCasting(ulong target, CastType type)
-        => new(target, type, HasStatus);
+    public ActorState SetCasting(ulong target, CastType type, byte percentage)
+        => new(target, type, HasStatus, percentage);
 
-    public static ActorState Nothing = new(0, CastType.None, false);
+    public static ActorState Nothing = new(0, CastType.None, false, 100);
 }
 
 public class ActorWatcher : IDisposable
@@ -59,8 +61,8 @@ public class ActorWatcher : IDisposable
         if (_enabled)
             return;
 
-        Dalamud.Framework.Update             += OnFrameworkUpdate;
-        _enabled                             =  true;
+        Dalamud.Framework.Update += OnFrameworkUpdate;
+        _enabled                 =  true;
     }
 
     public void Disable()
@@ -68,8 +70,8 @@ public class ActorWatcher : IDisposable
         if (!_enabled)
             return;
 
-        Dalamud.Framework.Update             -= OnFrameworkUpdate;
-        _enabled                             =  false;
+        Dalamud.Framework.Update -= OnFrameworkUpdate;
+        _enabled                 =  false;
         RezList.Clear();
         PlayerRez = (0, ActorState.Nothing);
     }
@@ -86,13 +88,13 @@ public class ActorWatcher : IDisposable
         return (PlayerJob(player), player.Level);
     }
 
-    private static unsafe (uint, GameObjectId) GetCurrentCast(IGameObject player)
+    private static unsafe (uint, GameObjectId, byte) GetCurrentCast(IGameObject player)
     {
         var     battleChara = (BattleChara*)player.Address;
         ref var cast        = ref *battleChara->GetCastInfo();
-        return cast.ActionType != ActionType.Action 
-            ? ((uint, GameObjectId))(0, 0) 
-            : (cast.ActionId, cast.TargetId);
+        return cast.ActionType != ActionType.Action
+            ? ((uint, GameObjectId, byte))(0, 0, 100)
+            : (cast.ActionId, cast.TargetId, cast.TotalCastTime > 0 ? (byte)(Math.Round(cast.CurrentCastTime * 100.0 / cast.TotalCastTime)) : (byte)100);
     }
 
     private static CastType GetCastType(uint castId)
@@ -116,7 +118,7 @@ public class ActorWatcher : IDisposable
             7568  => CastType.Dispel, // Esuna, instant, so irrelevant
             3561  => CastType.Dispel, // The Warden's Paean, instant, so irrelevant
             18318 => CastType.Dispel, // Exuviation
-            _ => CastType.None,
+            _     => CastType.None,
         };
     }
 
@@ -160,12 +162,12 @@ public class ActorWatcher : IDisposable
             {
                 ActorPositions[actorId] = player.Position;
                 if (HasStatus(player) == CastType.Raise)
-                    RezList[actorId] = new ActorState(0, CastType.Raise, false);
+                    RezList[actorId] = new ActorState(0, CastType.Raise, false, 100);
                 ActorNames.TryAdd(actorId, player.Name.TextValue);
             }
             else
             {
-                var (castId, castTarget) = GetCurrentCast(player);
+                var (castId, castTarget, percentage) = GetCurrentCast(player);
                 var castType    = GetCastType(castId);
                 var dispellable = HasStatus(player) == CastType.Dispel;
                 if (castType == CastType.None && !dispellable)
@@ -175,23 +177,23 @@ public class ActorWatcher : IDisposable
                 {
                     RezList[actorId] = RezList.TryGetValue(actorId, out var state)
                         ? state.SetHasStatus(true)
-                        : new ActorState(0, CastType.None, true);
+                        : new ActorState(0, CastType.None, true, 100);
                     ActorPositions[actorId] = player.Position;
                 }
 
                 ActorNames.TryAdd(actorId, player.Name.TextValue);
                 if (i == 0)
-                    PlayerRez = (castTarget, new ActorState(actorId, castType, false));
+                    PlayerRez = (castTarget, new ActorState(actorId, castType, false, percentage));
 
                 if (castType == CastType.Raise
                  && (!RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
                     RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
-                        ? state.SetCasting(actorId, castType)
-                        : new ActorState(actorId, castType, false);
+                        ? state.SetCasting(actorId, castType, percentage)
+                        : new ActorState(actorId, castType, false, percentage);
                 if (castType == CastType.Dispel)
                     RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
-                        ? state.SetCasting(actorId, castType)
-                        : new ActorState(actorId, castType, false);
+                        ? state.SetCasting(actorId, castType, percentage)
+                        : new ActorState(actorId, castType, false, percentage);
             }
         }
     }
@@ -208,31 +210,32 @@ public class ActorWatcher : IDisposable
         ActorNamesAdd(p);
         ActorPositions[p.GameObjectId] = p.Position;
 
-        var t         = Dalamud.Targets.Target ?? p;
-        var tObjectId = Dalamud.Targets.Target?.GameObjectId ?? 10;
+        var t          = Dalamud.Targets.Target ?? p;
+        var tObjectId  = Dalamud.Targets.Target?.GameObjectId ?? 10;
+        var percentage = (byte)(ImGui.GetFrameCount() % 101);
         switch (TestMode)
         {
             case 1:
-                RezList[p.GameObjectId] = new ActorState(0, CastType.Raise, false);
+                RezList[p.GameObjectId] = new ActorState(0, CastType.Raise, false, percentage);
                 return;
             case 2:
-                RezList[p.GameObjectId] = new ActorState(t.GameObjectId, CastType.Raise, false);
+                RezList[p.GameObjectId] = new ActorState(t.GameObjectId, CastType.Raise, false, percentage);
                 ActorNamesAdd(t);
                 return;
             case 3:
-                RezList[p.GameObjectId] = new ActorState(tObjectId, CastType.Raise, false);
-                PlayerRez               = (p.GameObjectId, new ActorState(p.GameObjectId, CastType.Raise, false));
+                RezList[p.GameObjectId] = new ActorState(tObjectId, CastType.Raise, false, percentage);
+                PlayerRez               = (p.GameObjectId, new ActorState(p.GameObjectId, CastType.Raise, false, percentage));
                 return;
             case 4:
-                RezList[p.GameObjectId] = new ActorState(0, CastType.None, true);
+                RezList[p.GameObjectId] = new ActorState(0, CastType.None, true, percentage);
                 return;
             case 5:
-                RezList[p.GameObjectId] = new ActorState(t.GameObjectId, CastType.Dispel, true);
+                RezList[p.GameObjectId] = new ActorState(t.GameObjectId, CastType.Dispel, true, percentage);
                 ActorNamesAdd(t);
                 return;
             case 6:
-                RezList[p.GameObjectId] = new ActorState(tObjectId, CastType.Dispel, false);
-                PlayerRez               = (p.GameObjectId, new ActorState(p.GameObjectId, CastType.Raise, true));
+                RezList[p.GameObjectId] = new ActorState(tObjectId, CastType.Dispel, false, percentage);
+                PlayerRez               = (p.GameObjectId, new ActorState(p.GameObjectId, CastType.Raise, true, percentage));
                 return;
         }
     }
