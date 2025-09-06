@@ -164,7 +164,7 @@ public class Interface : IDisposable
 
     private void DrawSingleStatusEffectList(string header, bool which, float width)
     {
-        using var group = ImGuiRaii.NewGroup();
+        using var group = ImRaii.Group();
         var       list  = which ? _plugin.StatusSet.DisabledStatusSet : _plugin.StatusSet.EnabledStatusSet;
         _seenNames.Clear();
         if (ImGui.BeginListBox($"##{header}box", width / 2 * Vector2.UnitX))

@@ -8,6 +8,7 @@ using Dalamud.Interface.Utility;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 using RezPls.Enums;
 using RezPls.Managers;
 
@@ -117,8 +118,7 @@ public class Overlay(ActorWatcher actorWatcher) : IDisposable
             ImGui.SetCursorPos(new Vector2(pos.X,                             pos.Y)
               - new Vector2(textSize.X / 2 + ImGui.GetStyle().FramePadding.X, 0)
               - ImGui.GetMainViewport().Pos);
-            using var imgui = new ImGuiRaii()
-                .PushColor(ImGuiCol.Button, color);
+            using var imgui = ImRaii.PushColor(ImGuiCol.Button, color);
             ImGui.Button(text);
         }
     }
