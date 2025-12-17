@@ -422,6 +422,8 @@ public class Interface : IDisposable
                         ImGuiTreeNodeFlags.Bullet | ImGuiTreeNodeFlags.Leaf).Dispose();
                 }
         }
+
+        ImGui.Checkbox("Use Debug Casts"u8, ref RezPls.GlobalDebug);
     }
 
     public void Enable()

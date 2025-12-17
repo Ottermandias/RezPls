@@ -7,10 +7,8 @@ using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
-using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using RezPls.Enums;
-using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
 namespace RezPls.Managers;
 
@@ -43,7 +41,6 @@ public class ActorWatcher : IDisposable
     private          bool                      _enabled;
     private readonly StatusSet                 _statusSet;
     private const    int                       ActorTablePlayerLength = 200;
-    private readonly ExcelSheet<TerritoryType> _territories;
 
     public readonly Dictionary<ulong, ActorState> RezList        = new(128);
     public readonly Dictionary<ulong, string>     ActorNames     = new();
@@ -53,7 +50,7 @@ public class ActorWatcher : IDisposable
     public ActorWatcher(StatusSet statusSet)
     {
         _statusSet   = statusSet;
-        _territories = Dalamud.GameData.GetExcelSheet<TerritoryType>();
+        Dalamud.GameData.GetExcelSheet<TerritoryType>();
     }
 
     public void Enable()
@@ -81,18 +78,18 @@ public class ActorWatcher : IDisposable
 
     public static (Job job, byte level) CurrentPlayerJob()
     {
-        var player = Dalamud.ClientState.LocalPlayer;
-        if (player == null || !IsPlayer(player))
+        if (!Dalamud.PlayerState.IsLoaded)
             return (Job.ADV, 0);
-
-        return (PlayerJob(player), player.Level);
+        var job    = (Job)Dalamud.PlayerState.ClassJob.RowId;
+        var level  = (byte)Dalamud.PlayerState.Level;
+        return (job, level);
     }
 
     private static unsafe (uint, GameObjectId, byte) GetCurrentCast(IGameObject player)
     {
         var     battleChara = (BattleChara*)player.Address;
         ref var cast        = ref *battleChara->GetCastInfo();
-        return cast.ActionType != ActionType.Action
+        return (ActionType)cast.ActionType != ActionType.Action
             ? ((uint, GameObjectId, byte))(0, 0, 100)
             : (cast.ActionId, cast.TargetId, cast.TotalCastTime > 0 ? (byte)(Math.Round(cast.CurrentCastTime * 100.0 / cast.TotalCastTime)) : (byte)100);
     }
@@ -101,32 +98,30 @@ public class ActorWatcher : IDisposable
     {
         return castId switch
         {
-            173   => CastType.Raise,  // ACN, SMN, SCH
-            125   => CastType.Raise,  // CNH, WHM
-            3603  => CastType.Raise,  // AST
-            18317 => CastType.Raise,  // BLU
-            208   => CastType.Raise,  // WHM LB3
-            4247  => CastType.Raise,  // SCH LB3
-            4248  => CastType.Raise,  // AST LB3
-            24859 => CastType.Raise,  // SGE LB3
-            7523  => CastType.Raise,  // RDM
-            22345 => CastType.Raise,  // Lost Sacrifice, Bozja
-            20730 => CastType.Raise,  // Lost Arise, Bozja
-            12996 => CastType.Raise,  // Raise L, Eureka
-            24287 => CastType.Raise,  // Egeiro
-            41634 => CastType.Raise,  // Revive, Occult Crescent, instant, so irrelevant
-            7568  => CastType.Dispel, // Esuna, instant, so irrelevant
-            3561  => CastType.Dispel, // The Warden's Paean, instant, so irrelevant
-            18318 => CastType.Dispel, // Exuviation
-            _     => CastType.None,
+            173                           => CastType.Raise,  // ACN, SMN, SCH
+            125                           => CastType.Raise,  // CNH, WHM
+            3603                          => CastType.Raise,  // AST
+            18317                         => CastType.Raise,  // BLU
+            208                           => CastType.Raise,  // WHM LB3
+            4247                          => CastType.Raise,  // SCH LB3
+            4248                          => CastType.Raise,  // AST LB3
+            24859                         => CastType.Raise,  // SGE LB3
+            7523                          => CastType.Raise,  // RDM
+            22345                         => CastType.Raise,  // Lost Sacrifice, Bozja
+            20730                         => CastType.Raise,  // Lost Arise, Bozja
+            12996                         => CastType.Raise,  // Raise L, Eureka
+            24287                         => CastType.Raise,  // Egeiro
+            41634                         => CastType.Raise,  // Revive, Occult Crescent, instant, so irrelevant
+            7568                          => CastType.Dispel, // Esuna, instant, so irrelevant
+            3561                          => CastType.Dispel, // The Warden's Paean, instant, so irrelevant
+            18318                         => CastType.Dispel, // Exuviation
+            24284 when RezPls.GlobalDebug => CastType.Raise,  // Diagnosis
+            135 when RezPls.GlobalDebug   => CastType.Raise,  // Cure II
+            185 when RezPls.GlobalDebug   => CastType.Raise,  // Adloquium
+            3610 when RezPls.GlobalDebug  => CastType.Raise,  // Benefic II
+            _                             => CastType.None,
         };
     }
-
-    private static bool IsPlayer(IGameObject actor)
-        => actor.ObjectKind == ObjectKind.Player;
-
-    private static Job PlayerJob(ICharacter player)
-        => (Job)player.ClassJob.RowId;
 
     private unsafe CastType HasStatus(IGameObject player)
     {
@@ -170,7 +165,7 @@ public class ActorWatcher : IDisposable
                 var (castId, castTarget, percentage) = GetCurrentCast(player);
                 var castType    = GetCastType(castId);
                 var dispellable = HasStatus(player) == CastType.Dispel;
-                if (castType == CastType.None && !dispellable)
+                if (castType is CastType.None && !dispellable)
                     continue;
 
                 if (dispellable)
@@ -185,12 +180,12 @@ public class ActorWatcher : IDisposable
                 if (i == 0)
                     PlayerRez = (castTarget, new ActorState(actorId, castType, false, percentage));
 
-                if (castType == CastType.Raise
+                if (castType is CastType.Raise
                  && (!RezList.TryGetValue(castTarget, out var caster) || caster.Caster == PlayerRez.Item2.Caster))
                     RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
                         ? state.SetCasting(actorId, castType, percentage)
                         : new ActorState(actorId, castType, false, percentage);
-                if (castType == CastType.Dispel)
+                if (castType is CastType.Dispel)
                     RezList[castTarget] = RezList.TryGetValue(castTarget, out var state)
                         ? state.SetCasting(actorId, castType, percentage)
                         : new ActorState(actorId, castType, false, percentage);
@@ -203,8 +198,7 @@ public class ActorWatcher : IDisposable
 
     private void HandleTestMode()
     {
-        var p = Dalamud.ClientState.LocalPlayer;
-        if (p == null)
+        if (Dalamud.Objects.LocalPlayer is not {} p)
             return;
 
         ActorNamesAdd(p);

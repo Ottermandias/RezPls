@@ -9,6 +9,7 @@ namespace RezPls;
 
 public partial class RezPls : IDalamudPlugin
 {
+    public static bool GlobalDebug = false;
     public string Name
         => "RezPls";
 
